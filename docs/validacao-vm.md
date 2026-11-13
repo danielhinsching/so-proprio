@@ -26,7 +26,7 @@ Executado num Linux de teste (Ubuntu 24.04, não Debian), sem VM:
    - [x] `./add desktop`, reiniciar → tela do LightDM e sessão LXQt. Anotar `free -h` logo após o login e `systemd-analyze`
    - [x] `./add navegador` → Firefox ESR abre
    - [x] `./add dev` → `code` abre; terminal novo, `fnm install --lts`, `node -v`
-   - [ ] `./add claude` → mostra a URL e o comando, `claude` abre num terminal novo
+   - [x] `./add claude` → mostra a URL e o comando, `claude` abre num terminal novo
    - [ ] `./add vm` → instala o VirtualBox da Oracle (dentro da VM ele só serve para testar a instalação)
 4. Corrigir nomes de pacote que falharem (`apt-cache policy <pacote>`) e registrar aqui.
 
@@ -45,6 +45,7 @@ Executado num Linux de teste (Ubuntu 24.04, não Debian), sem VM:
 | Firefox ESR | 153.7.0esr |
 | VS Code (repositório Microsoft, deb822) | 1.146.0, sem erro de Signed-By |
 | Node.js via fnm | v26.13.1 (LTS) |
+| Claude Code (instalador nativo) | 2.1.323; PATH corrigido pelo claude.sh |
 | boot com desktop | 11,17 s (kernel 9,07 s + userspace 2,10 s) |
 
 ## 3. Notebook — só depois da VM e do backup
