@@ -66,6 +66,8 @@ Para atualizar um sistema que já está instalado: `git pull`, depois `./add bas
 
 **Tema claro ou escuro:** o padrão é claro. Para o escuro: `SO_PROPRIO_TEMA=escuro ./add visual` (volte com `./add visual`). Isso troca tema do LXQt, ícones, janelas do Openbox, apps GTK e papel de parede de uma vez. O Conky tem fundo escuro fixo; edite `~/.config/conky/conky.conf` se quiser outra cor.
 
+**Ícones sem moldura:** o `visual` cria o tema `so-proprio-claro`/`so-proprio-escuro` (cópia do tema base do LXQt com os botões do painel sem borda), e os painéis ficam menores (dock 36 px, barra 26 px). Para mudar tamanhos, edite `~/.config/lxqt/panel.conf` (`panelSize` e `iconSize`).
+
 **Painel e atalhos:** o `visual` só regera o painel se faltar a marca `so_proprio=1` em `~/.config/lxqt/panel.conf`, então suas edições ficam. Para voltar ao do repo: `SO_PROPRIO_VISUAL_FORCE=1 ./add visual` (o anterior fica em `panel.conf.so-proprio.bak`). Os atalhos ficam em `~/.config/openbox/rc.xml`.
 
 **Firefox:** confira em `about:policies` se as políticas estão ativas. As preferências são padrões e dá para mudar em `about:config`. O uBlock Origin é baixado na primeira abertura, com rede.

@@ -2,7 +2,7 @@
 # Visual do desktop: tema escuro, painel (dock central + barra de status),
 # uma única área de trabalho e atalhos de teclado no Openbox.
 # Não sobrescreve o que você já editou: o painel só é regerado se faltar a marca
-# so_proprio=2 (ou com SO_PROPRIO_VISUAL_FORCE=1); o rc.xml do Openbox só ganha o que falta.
+# so_proprio=3 (ou com SO_PROPRIO_VISUAL_FORCE=1); o rc.xml do Openbox só ganha o que falta.
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -25,6 +25,41 @@ else
 fi
 ACCENT='#0a84ff'
 
+# Tema próprio: cópia do tema base do LXQt + botões do painel sem moldura (só o ícone).
+THEMES_SRC="${SO_PROPRIO_LXQT_THEMES_DIR:-/usr/share/lxqt/themes}"
+CUSTOM_THEME="so-proprio-$MODE"
+CUSTOM_DIR="$HOME/.local/share/lxqt/themes/$CUSTOM_THEME"
+if [ -d "$THEMES_SRC/$LXQT_THEME" ]; then
+  rm -rf "$CUSTOM_DIR"
+  mkdir -p "$(dirname "$CUSTOM_DIR")"
+  cp -r "$THEMES_SRC/$LXQT_THEME" "$CUSTOM_DIR"
+  cat >> "$CUSTOM_DIR/lxqt-panel.qss" <<'QSS'
+
+/* so-proprio: sem moldura nos botões do painel, só o ícone */
+LXQtPanel QToolButton,
+#TaskBar QToolButton,
+#QuickLaunchButton,
+#TrayIcon {
+    border: none;
+    padding: 0px;
+    margin: 0px;
+    background: transparent;
+}
+LXQtPanel QToolButton:hover,
+#TaskBar QToolButton:hover {
+    background-color: rgba(128, 128, 128, 45);
+    border-radius: 6px;
+}
+LXQtPanel QToolButton:pressed,
+#TaskBar QToolButton:checked {
+    background-color: rgba(128, 128, 128, 75);
+    border-radius: 6px;
+}
+QSS
+  LXQT_THEME="$CUSTOM_THEME"
+else
+  echo "Aviso: tema base $THEMES_SRC/$LXQT_THEME não existe; usando o tema original, com moldura nos botões."
+fi
 ini_set "$LXQT_DIR/lxqt.conf" General theme "$LXQT_THEME"
 ini_set "$LXQT_DIR/lxqt.conf" General icon_theme "$ICONS"
 ini_set "$LXQT_DIR/lxqt.conf" Qt style Fusion
@@ -165,7 +200,7 @@ rm -f "$TP_TMP"
 echo "Touchpad: rolagem invertida e toque para clicar (vale no próximo login)."
 
 # --- Painel ---
-if [ -f "$PANEL" ] && grep -qx 'so_proprio=2' "$PANEL" && [ "${SO_PROPRIO_VISUAL_FORCE:-0}" != "1" ]; then
+if [ -f "$PANEL" ] && grep -qx 'so_proprio=3' "$PANEL" && [ "${SO_PROPRIO_VISUAL_FORCE:-0}" != "1" ]; then
   echo "Painel: já configurado pelo so-proprio, mantido (SO_PROPRIO_VISUAL_FORCE=1 para regerar)."
 else
   mkdir -p "$LXQT_DIR"
@@ -176,7 +211,7 @@ else
 [General]
 __userfile__=true
 panels=panel1, panel2
-so_proprio=2
+so_proprio=3
 
 [panel1]
 alignment=0
@@ -184,11 +219,11 @@ animation-duration=0
 desktop=0
 hidable=true
 hide-on-overlap=false
-iconSize=24
+iconSize=20
 lineCount=1
 lockPanel=false
 opacity=100
-panelSize=40
+panelSize=36
 plugins=mainmenu, quicklaunch, taskbar
 position=Bottom
 reserve-space=false
@@ -203,11 +238,11 @@ animation-duration=0
 desktop=0
 hidable=false
 hide-on-overlap=false
-iconSize=20
+iconSize=16
 lineCount=1
 lockPanel=false
 opacity=100
-panelSize=28
+panelSize=26
 plugins=statusnotifier, tray, volume, worldclock
 position=Top
 reserve-space=true

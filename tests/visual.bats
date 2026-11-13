@@ -30,6 +30,12 @@ S
 </openbox_config>
 X
   export OPENBOX_DEFAULT_RC="$TMP/xdg/openbox/rc.xml"
+  export SO_PROPRIO_LXQT_THEMES_DIR="$TMP/lxqt-themes"
+  for t in light dark; do
+    mkdir -p "$SO_PROPRIO_LXQT_THEMES_DIR/$t"
+    echo "/* tema $t */" > "$SO_PROPRIO_LXQT_THEMES_DIR/$t/lxqt-panel.qss"
+    echo "[General]" > "$SO_PROPRIO_LXQT_THEMES_DIR/$t/lxqt-theme.conf"
+  done
 }
 
 teardown() { rm -rf "$TMP"; }
@@ -130,7 +136,7 @@ panel_conf() { echo "$HOME/.config/lxqt/panel.conf"; }
 @test "SO_PROPRIO_TEMA=escuro usa a paleta escura em tudo" {
   SO_PROPRIO_TEMA=escuro run_visual
   grep -q '^window.active.title.bg.color: #1c1c1e' "$HOME/.themes/SoProprio/openbox-3/themerc"
-  awk '/^\[General\]/{p=1;next} /^\[/{p=0} p' "$HOME/.config/lxqt/lxqt.conf" | grep -qx 'theme=dark'
+  awk '/^\[General\]/{p=1;next} /^\[/{p=0} p' "$HOME/.config/lxqt/lxqt.conf" | grep -qx 'theme=so-proprio-escuro'
   grep -qx 'icon_theme=Papirus-Dark' "$HOME/.config/lxqt/lxqt.conf"
   grep -qx 'gtk-application-prefer-dark-theme=true' "$HOME/.config/gtk-3.0/settings.ini"
   cmp -s "$HOME/.local/share/so-proprio/wallpaper.png" "$REPO/dotfiles/wallpaper/escuro.png"
@@ -147,7 +153,7 @@ panel_conf() { echo "$HOME/.config/lxqt/panel.conf"; }
 @test "visual.sh usa por padrão o tema claro do LXQt, ícones Papirus e a fonte Inter" {
   run_visual
   c="$HOME/.config/lxqt/lxqt.conf"
-  awk '/^\[General\]/{p=1;next} /^\[/{p=0} p' "$c" | grep -qx 'theme=light'
+  awk '/^\[General\]/{p=1;next} /^\[/{p=0} p' "$c" | grep -qx 'theme=so-proprio-claro'
   awk '/^\[General\]/{p=1;next} /^\[/{p=0} p' "$c" | grep -qx 'icon_theme=Papirus'
   awk '/^\[Qt\]/{p=1;next} /^\[/{p=0} p' "$c" | grep -qx 'style=Fusion'
   awk '/^\[Qt\]/{p=1;next} /^\[/{p=0} p' "$c" | grep -q '^font=.*Inter'
@@ -294,7 +300,7 @@ I
   ini_set "$f" General theme light
   ini_set "$f" Outra a b
   [ "$(grep -c '^theme=' "$f")" -eq 1 ]
-  grep -qx 'theme=light' "$f"; grep -qx 'style=Fusion' "$f"
+  grep -qx 'theme=so-proprio-claro' "$f"; grep -qx 'style=Fusion' "$f"
   awk '/^\[Outra\]/{p=1;next} /^\[/{p=0} p' "$f" | grep -qx 'a=b'
 }
 
@@ -333,7 +339,7 @@ S
   mkdir -p "$HOME/.config/lxqt"
   printf '[General]\nso_proprio=1\n[panel1]\nhidable=false\n' > "$(panel_conf)"
   run_visual
-  grep -qx 'so_proprio=2' "$(panel_conf)"
+  grep -qx 'so_proprio=3' "$(panel_conf)"
   awk '/^\[panel1\]/{p=1;next} /^\[/{p=0} p' "$(panel_conf)" | grep -qx 'hidable=true'
 }
 
@@ -388,4 +394,35 @@ S
 
 @test "o ícone do menu existe no repo como PNG" {
   [ "$(head -c 8 "$REPO/dotfiles/icons/so-proprio-menu.png" | od -An -tx1 | tr -d ' \n')" = "89504e470d0a1a0a" ]
+}
+
+# --- terceira rodada: ícones sem moldura ---
+
+@test "os painéis são menores, com ícones menores" {
+  run_visual
+  c="$(panel_conf)"
+  awk '/^\[panel1\]/{p=1;next} /^\[/{p=0} p' "$c" | grep -qx 'panelSize=36'
+  awk '/^\[panel1\]/{p=1;next} /^\[/{p=0} p' "$c" | grep -qx 'iconSize=20'
+  awk '/^\[panel2\]/{p=1;next} /^\[/{p=0} p' "$c" | grep -qx 'panelSize=26'
+  awk '/^\[panel2\]/{p=1;next} /^\[/{p=0} p' "$c" | grep -qx 'iconSize=16'
+  grep -qx 'so_proprio=3' "$c"
+}
+
+@test "o tema próprio do LXQt é cópia do base e tira a moldura dos botões do painel" {
+  run_visual
+  d="$HOME/.local/share/lxqt/themes/so-proprio-claro"
+  grep -q '/\* tema light \*/' "$d/lxqt-panel.qss"
+  grep -q 'QToolButton' "$d/lxqt-panel.qss"
+  grep -q 'border: none' "$d/lxqt-panel.qss"
+  [ -f "$d/lxqt-theme.conf" ]
+}
+
+@test "sem o tema base do sistema, usa o tema light/dark original" {
+  SO_PROPRIO_LXQT_THEMES_DIR="$TMP/nao-existe" run_visual
+  awk '/^\[General\]/{p=1;next} /^\[/{p=0} p' "$HOME/.config/lxqt/lxqt.conf" | grep -qx 'theme=light'
+}
+
+@test "rodar de novo não duplica o ajuste do tema próprio" {
+  run_visual; run_visual
+  [ "$(grep -c 'so-proprio: sem moldura' "$HOME/.local/share/lxqt/themes/so-proprio-claro/lxqt-panel.qss")" -eq 1 ]
 }
