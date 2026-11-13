@@ -223,3 +223,15 @@ A
   grep -q '^fnm install --lts' "$TMP/fnm.log"
   grep -q '^fnm default lts-latest' "$TMP/fnm.log"
 }
+
+@test "claude.sh garante ~/.local/bin no PATH do bashrc, uma vez só" {
+  mkdir -p "$TMP/home/.local/bin"
+  printf '#!/bin/sh\necho 1.0\n' > "$TMP/home/.local/bin/claude"; chmod +x "$TMP/home/.local/bin/claude"
+  touch "$TMP/home/.bashrc"
+  run env -i HOME="$TMP/home" PATH="/usr/bin:/bin" SO_PROPRIO_UID=1000 bash "$REPO/grupos/claude.sh"
+  [ "$status" -eq 0 ]
+  run env -i HOME="$TMP/home" PATH="/usr/bin:/bin" SO_PROPRIO_UID=1000 bash "$REPO/grupos/claude.sh"
+  [ "$(grep -c 'so-proprio: ~/.local/bin' "$TMP/home/.bashrc")" -eq 1 ]
+  run env -i HOME="$TMP/home" bash -c 'source "$HOME/.bashrc"; command -v claude'
+  [ "$output" = "$TMP/home/.local/bin/claude" ]
+}

@@ -6,7 +6,21 @@ set -euo pipefail
 DOC_URL="https://code.claude.com/docs/en/setup"
 INSTALL_URL="https://claude.ai/install.sh"
 
+# O instalador coloca o claude em ~/.local/bin. No Debian, o ~/.profile só põe essa
+# pasta no PATH se ela já existia no login, então garantimos isso no ~/.bashrc.
+ensure_local_bin_path() {
+  local rc="$HOME/.bashrc" marker="# so-proprio: ~/.local/bin no PATH"
+  touch "$rc"
+  grep -qF "$marker" "$rc" && return 0
+  {
+    printf '\n%s\n' "$marker"
+    # shellcheck disable=SC2016  # $HOME e $PATH devem expandir no bashrc, não aqui
+    printf 'case ":$PATH:" in *":$HOME/.local/bin:"*) ;; *) PATH="$HOME/.local/bin:$PATH" ;; esac\n'
+  } >> "$rc"
+}
+
 if command -v claude >/dev/null 2>&1 || [ -x "$HOME/.local/bin/claude" ]; then
+  ensure_local_bin_path
   echo "Claude Code: já instalado."
   exit 0
 fi
@@ -29,4 +43,5 @@ if ! command -v claude >/dev/null 2>&1 && [ ! -x "$HOME/.local/bin/claude" ]; th
   echo "ERRO: o instalador terminou, mas o comando 'claude' não foi encontrado." >&2
   exit 1
 fi
+ensure_local_bin_path
 echo "Abra um novo terminal e rode: claude"
