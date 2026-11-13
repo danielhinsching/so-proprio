@@ -58,6 +58,6 @@ A VM foi validada **com** recomendados. Depois disso, os grupos passaram a insta
 
 | Medida | Ubuntu antigo | so-proprio |
 |---|---|---|
-| `systemd-analyze` (boot) | | |
-| `free -h` em repouso | | |
+| `systemd-analyze` (boot) | 2 min 45 s (firmware 4,6 s + loader 9,1 s + kernel 29,9 s + userspace 2 min 1,9 s) | |
+| `free -h` | 2,9 GiB usados de 9,6 GiB (medido em 13/11, possivelmente com apps abertos) | |
 | VS Code abre em | | |
