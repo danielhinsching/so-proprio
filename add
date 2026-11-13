@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# so-proprio: instala o sistema aos poucos, um grupo por vez.
+# Uso: ./add [--dry-run] [--yes] [<grupo>]
+set -euo pipefail
+
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+GRUPOS_DIR="${GRUPOS_DIR:-$REPO_DIR/grupos}"
+# shellcheck source=lib/add-lib.sh
+source "$REPO_DIR/lib/add-lib.sh"
+
+DRY_RUN=0
+ASSUME_YES=0
+GROUP=""
+HAS_GROUP=0
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --dry-run) DRY_RUN=1 ;;
+    --yes|-y) ASSUME_YES=1 ;;
+    -h|--help) GROUP=""; HAS_GROUP=0; break ;;
+    -*) echo "Opção desconhecida: $1" >&2; exit 2 ;;
+    *) GROUP="$1"; HAS_GROUP=1 ;;
+  esac
+  shift
+done
+export DRY_RUN ASSUME_YES
+
+show_groups() {
+  echo "Grupos disponíveis:"
+  list_groups "$GRUPOS_DIR" | sed 's/^/  /'
+}
+
+if [ "$HAS_GROUP" -eq 0 ]; then
+  echo "Uso: ./add [--dry-run] [--yes] <grupo>"
+  show_groups
+  exit 0
+fi
+
+if ! is_group "$GRUPOS_DIR" "$GROUP"; then
+  echo "Grupo desconhecido: '$GROUP'" >&2
+  show_groups >&2
+  exit 2
+fi
