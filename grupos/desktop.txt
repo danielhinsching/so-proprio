@@ -1,0 +1,10 @@
+# Desktop leve: LXQt + Openbox, login com LightDM
+xserver-xorg-core
+xinit
+lightdm
+lightdm-gtk-greeter
+openbox
+obconf-qt
+lxqt-core
+qterminal
+pcmanfm-qt

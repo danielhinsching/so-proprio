@@ -1,0 +1,6 @@
+# Desenvolvimento (VS Code e fnm vêm do dev.sh)
+python3
+python3-venv
+pipx
+build-essential
+unzip

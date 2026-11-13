@@ -118,3 +118,28 @@ A
   [ "$status" -ne 0 ]
   [ ! -e "$FAKE_APT_LOG" ]
 }
+
+# --- Task 3: grupos reais ---
+
+@test "todo nome em grupos/*.txt é um nome de pacote válido" {
+  source "$REPO/lib/add-lib.sh"
+  local f n count=0
+  for f in "$REPO"/grupos/*.txt; do
+    while IFS= read -r n; do
+      [[ "$n" =~ ^[a-z0-9][a-z0-9+.-]+$ ]] || { echo "inválido em $f: '$n'"; return 1; }
+      count=$((count + 1))
+    done < <(read_packages "$f")
+  done
+  [ "$count" -gt 0 ]
+}
+
+@test "existem os grupos base, desktop, dev, navegador, vm e claude" {
+  run env -u GRUPOS_DIR "$REPO/add"
+  for g in base desktop dev navegador vm claude; do
+    printf '%s\n' "$output" | grep -qx "  $g"
+  done
+}
+
+@test "todos os .sh de grupos passam no shellcheck" {
+  shellcheck "$REPO"/grupos/*.sh
+}

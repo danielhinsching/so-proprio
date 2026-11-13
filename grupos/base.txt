@@ -1,0 +1,9 @@
+# Base mínima: rede, sudo e ferramentas essenciais
+sudo
+network-manager
+git
+curl
+ca-certificates
+gnupg
+htop
+zram-tools

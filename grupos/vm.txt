@@ -1,0 +1,3 @@
+# Requisitos para os módulos do VirtualBox (o VirtualBox vem do vm.sh)
+linux-headers-amd64
+dkms

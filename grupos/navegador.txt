@@ -1,0 +1,2 @@
+# Navegador leve, em .deb
+firefox-esr
