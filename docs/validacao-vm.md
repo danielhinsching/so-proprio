@@ -24,8 +24,8 @@ Executado num Linux de teste (Ubuntu 24.04, não Debian), sem VM:
    - [x] `./add base` e depois `./add base` de novo → "nada a instalar"
    - [x] `./add tuning`, reiniciar, conferir: `findmnt -no OPTIONS /` contém `noatime`; `cat /proc/sys/vm/swappiness` = 10; `cat /proc/swaps` mostra `/dev/zram0` (ou `sudo zramctl`; ele fica em /usr/sbin); `cat /sys/block/sda/queue/scheduler` mostra `[bfq]`
    - [x] `./add desktop`, reiniciar → tela do LightDM e sessão LXQt. Anotar `free -h` logo após o login e `systemd-analyze`
-   - [ ] `./add navegador` → Firefox ESR abre
-   - [ ] `./add dev` → `code` abre; terminal novo, `fnm install --lts`, `node -v`
+   - [x] `./add navegador` → Firefox ESR abre
+   - [x] `./add dev` → `code` abre; terminal novo, `fnm install --lts`, `node -v`
    - [ ] `./add claude` → mostra a URL e o comando, `claude` abre num terminal novo
    - [ ] `./add vm` → instala o VirtualBox da Oracle (dentro da VM ele só serve para testar a instalação)
 4. Corrigir nomes de pacote que falharem (`apt-cache policy <pacote>`) e registrar aqui.
@@ -42,6 +42,9 @@ Executado num Linux de teste (Ubuntu 24.04, não Debian), sem VM:
 | RAM em repouso (sem desktop) | 324 MiB usados |
 | boot | 7,79 s (kernel 5,41 s + userspace 2,39 s) |
 | RAM em repouso com LXQt + Openbox | 496 MiB usados |
+| Firefox ESR | 153.7.0esr |
+| VS Code (repositório Microsoft, deb822) | 1.146.0, sem erro de Signed-By |
+| Node.js via fnm | v26.13.1 (LTS) |
 | boot com desktop | 11,17 s (kernel 9,07 s + userspace 2,10 s) |
 
 ## 3. Notebook — só depois da VM e do backup
