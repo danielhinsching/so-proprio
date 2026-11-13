@@ -212,3 +212,14 @@ A
   HOME="$TMP/home" bash "$REPO/grupos/desktop.sh"
   grep -qx 'window_manager=xfwm4' "$TMP/home/.config/lxqt/session.conf"
 }
+
+@test "dev.sh já instala o Node LTS pelo fnm" {
+  mkdir -p "$TMP/home" "$TMP/bin"
+  printf '#!/bin/sh\nexit 0\n' > "$TMP/bin/code"
+  printf '#!/bin/sh\necho "fnm $*" >> "%s"\n' "$TMP/fnm.log" > "$TMP/bin/fnm"
+  chmod +x "$TMP/bin/code" "$TMP/bin/fnm"
+  run env HOME="$TMP/home" PATH="$TMP/bin:$PATH" bash "$REPO/grupos/dev.sh"
+  [ "$status" -eq 0 ]
+  grep -q '^fnm install --lts' "$TMP/fnm.log"
+  grep -q '^fnm default lts-latest' "$TMP/fnm.log"
+}

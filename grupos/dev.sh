@@ -35,5 +35,15 @@ else
   curl -fsSL -o "$tmp" https://fnm.vercel.app/install
   bash "$tmp"
   rm -f "$tmp"
-  echo "Abra um novo terminal e rode: fnm install --lts"
+fi
+
+# Node.js LTS já instalado e como padrão (sem precisar abrir outro terminal).
+FNM="$(command -v fnm 2>/dev/null || echo "$HOME/.local/share/fnm/fnm")"
+if [ -x "$FNM" ]; then
+  echo "Node.js: instalando a versão LTS com o fnm."
+  "$FNM" install --lts
+  "$FNM" default lts-latest
+  echo "Abra um novo terminal para usar node e npm."
+else
+  echo "Aviso: fnm não encontrado em $FNM; rode 'fnm install --lts' num terminal novo." >&2
 fi

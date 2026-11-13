@@ -59,7 +59,7 @@ A ideia: instalar só a base, e depois adicionar um grupo de cada vez com `./add
 
 Ordem sugerida: `base` → `tuning` → `desktop` → `navegador` → `dev` → `claude` → `vm`.
 
-Depois do `dev`: abra um terminal novo e rode `fnm install --lts`.
+Depois do `dev`: o Node.js LTS já vem instalado; abra um terminal novo para usar `node` e `npm`.
 Depois do `vm`: faça logout/login. Com Secure Boot ativo, os módulos do VirtualBox precisam ser assinados ou o Secure Boot desativado no BIOS.
 
 O histórico de execuções fica em `~/.local/state/so-proprio/add.log`.
