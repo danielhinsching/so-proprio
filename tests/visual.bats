@@ -249,3 +249,24 @@ I
   grep -qx 'theme=light' "$f"; grep -qx 'style=Fusion' "$f"
   awk '/^\[Outra\]/{p=1;next} /^\[/{p=0} p' "$f" | grep -qx 'a=b'
 }
+
+@test "base.sh lê o /etc/network/interfaces com sudo (o arquivo costuma ser só do root)" {
+  write_interfaces
+  cat > "$TMP/fakesudo" <<'S'
+#!/usr/bin/env bash
+echo "$*" >> "$FAKE_SUDO_LOG"
+exec "$@"
+S
+  chmod +x "$TMP/fakesudo"
+  export FAKE_SUDO_LOG="$TMP/sudo.log" SO_PROPRIO_SUDO="$TMP/fakesudo"
+  bash "$REPO/grupos/base.sh"
+  grep -q 'cat .*/etc/network/interfaces' "$FAKE_SUDO_LOG"
+  ! grep -v '^[[:space:]]*#' "$ROOT_PREFIX/etc/network/interfaces" | grep -q '[^[:space:]]'
+}
+
+@test "base.sh falha em voz alta se não conseguir ler o arquivo" {
+  write_interfaces
+  printf '#!/usr/bin/env bash\nexit 1\n' > "$TMP/badsudo"; chmod +x "$TMP/badsudo"
+  SO_PROPRIO_SUDO="$TMP/badsudo" run bash "$REPO/grupos/base.sh"
+  [ "$status" -ne 0 ]
+}

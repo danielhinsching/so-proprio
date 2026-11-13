@@ -7,21 +7,27 @@ set -euo pipefail
 ROOT="${ROOT_PREFIX:-}"
 F="$ROOT/etc/network/interfaces"
 SUDO=()
-if [ -z "$ROOT" ] && [ "$(id -u)" -ne 0 ]; then SUDO=(sudo); fi
+if [ -n "${SO_PROPRIO_SUDO:-}" ]; then
+  read -ra SUDO <<< "$SO_PROPRIO_SUDO"   # gancho de teste
+elif [ -z "$ROOT" ] && [ "$(id -u)" -ne 0 ]; then
+  SUDO=(sudo)
+fi
 
 if [ ! -f "$F" ]; then
   echo "Rede: $F não existe, nada a ajustar."
   exit 0
 fi
 
-if ! grep -v '^[[:space:]]*#' "$F" | grep -q '[^[:space:]]'; then
+# O arquivo costuma ser só do root (guarda a senha do Wi-Fi): ler com sudo, e parar se falhar.
+CONTENT="$("${SUDO[@]}" cat "$F")" || { echo "ERRO: não consegui ler $F" >&2; exit 1; }
+if ! printf '%s\n' "$CONTENT" | grep -v '^[[:space:]]*#' | grep -q '[^[:space:]]'; then
   echo "Rede: $F já está comentado, mantido."
   exit 0
 fi
 
 [ -e "$F.so-proprio.bak" ] || "${SUDO[@]}" cp -p "$F" "$F.so-proprio.bak"
 tmp="$(mktemp)"
-awk '/^[[:space:]]*#/ || /^[[:space:]]*$/ { print; next } { print "# " $0 }' "$F" > "$tmp"
+printf '%s\n' "$CONTENT" | awk '/^[[:space:]]*#/ || /^[[:space:]]*$/ { print; next } { print "# " $0 }' > "$tmp"
 "${SUDO[@]}" install -m 0644 "$tmp" "$F"
 rm -f "$tmp"
 
