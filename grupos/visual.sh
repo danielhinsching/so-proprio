@@ -2,7 +2,7 @@
 # Visual do desktop: tema escuro, painel (dock central + barra de status),
 # uma única área de trabalho e atalhos de teclado no Openbox.
 # Não sobrescreve o que você já editou: o painel só é regerado se faltar a marca
-# so_proprio=1 (ou com SO_PROPRIO_VISUAL_FORCE=1); o rc.xml do Openbox só ganha o que falta.
+# so_proprio=2 (ou com SO_PROPRIO_VISUAL_FORCE=1); o rc.xml do Openbox só ganha o que falta.
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -119,8 +119,53 @@ for f in close iconify max max_toggled desk desk_toggled shade shade_toggled; do
   cp "$REPO_DIR/dotfiles/openbox/$f.xbm" "$OB_THEME/$f.xbm"
 done
 
+# --- Ícone do botão do menu (grade de apps) ---
+ICON_DIR="$HOME/.local/share/icons/hicolor/64x64/apps"
+mkdir -p "$ICON_DIR"
+cp "$REPO_DIR/dotfiles/icons/so-proprio-menu.png" "$ICON_DIR/so-proprio-menu.png"
+
+# --- Bateria: cbatticon usa os ícones do tema; o do LXQt é um gráfico de pizza ---
+ini_set "$LXQT_DIR/lxqt-powermanagement.conf" General showIcon false
+mkdir -p "$HOME/.config/autostart"
+cat > "$HOME/.config/autostart/so-proprio-bateria.desktop" <<'DESKTOP'
+[Desktop Entry]
+Type=Application
+Name=Bateria (so-proprio)
+Exec=cbatticon -u 30
+DESKTOP
+
+# --- Pré-carga: VS Code e Firefox lidos para a memória logo depois do login ---
+# No HD, a primeira abertura é o que demora; com 9 GB de RAM sobrando, o cache de disco guarda os dois.
+cat > "$HOME/.config/autostart/so-proprio-precarga.desktop" <<'DESKTOP'
+[Desktop Entry]
+Type=Application
+Name=Pré-carga do VS Code e do Firefox (so-proprio)
+Exec=sh -c "sleep 20; exec ionice -c3 nice -n19 sh -c 'find /usr/share/code /usr/lib/firefox-esr -type f -size +64k -exec cat {} + >/dev/null 2>&1'"
+DESKTOP
+
+# --- Touchpad: rolagem invertida (natural, como no macOS) e toque para clicar ---
+# Vale a partir do próximo login (o Xorg lê esse arquivo ao iniciar).
+ROOT="${ROOT_PREFIX:-}"
+SUDO=()
+if [ -z "$ROOT" ] && [ "$(id -u)" -ne 0 ]; then SUDO=(sudo); fi
+TP_TMP="$(mktemp)"
+cat > "$TP_TMP" <<'XORG'
+Section "InputClass"
+    Identifier "so-proprio touchpad"
+    MatchIsTouchpad "on"
+    MatchDriver "libinput"
+    Option "NaturalScrolling" "true"
+    Option "Tapping" "on"
+    Option "DisableWhileTyping" "on"
+    Option "ClickMethod" "clickfinger"
+EndSection
+XORG
+"${SUDO[@]}" install -D -m 0644 "$TP_TMP" "$ROOT/etc/X11/xorg.conf.d/40-so-proprio-touchpad.conf"
+rm -f "$TP_TMP"
+echo "Touchpad: rolagem invertida e toque para clicar (vale no próximo login)."
+
 # --- Painel ---
-if [ -f "$PANEL" ] && grep -qx 'so_proprio=1' "$PANEL" && [ "${SO_PROPRIO_VISUAL_FORCE:-0}" != "1" ]; then
+if [ -f "$PANEL" ] && grep -qx 'so_proprio=2' "$PANEL" && [ "${SO_PROPRIO_VISUAL_FORCE:-0}" != "1" ]; then
   echo "Painel: já configurado pelo so-proprio, mantido (SO_PROPRIO_VISUAL_FORCE=1 para regerar)."
 else
   mkdir -p "$LXQT_DIR"
@@ -131,13 +176,13 @@ else
 [General]
 __userfile__=true
 panels=panel1, panel2
-so_proprio=1
+so_proprio=2
 
 [panel1]
 alignment=0
 animation-duration=0
 desktop=0
-hidable=false
+hidable=true
 hide-on-overlap=false
 iconSize=24
 lineCount=1
@@ -146,7 +191,7 @@ opacity=100
 panelSize=40
 plugins=mainmenu, quicklaunch, taskbar
 position=Bottom
-reserve-space=true
+reserve-space=false
 show-delay=0
 visible-margin=true
 width=60
@@ -173,6 +218,7 @@ width-percent=true
 
 [mainmenu]
 alignment=Left
+icon=so-proprio-menu
 showText=false
 type=mainmenu
 
@@ -234,8 +280,15 @@ if [ -f "$RC" ]; then
   add_key C-A-t qterminal
   add_key C-A-f firefox-esr
   add_key C-A-c code
+  add_key W-l light-locker-command\ -l
+  add_key Print screengrab\ -r
+  add_key XF86MonBrightnessUp brightnessctl\ set\ +5%
+  add_key XF86MonBrightnessDown brightnessctl\ set\ 5%-
+  add_key XF86AudioRaiseVolume wpctl\ set-volume\ -l\ 1.0\ @DEFAULT_AUDIO_SINK@\ 5%+
+  add_key XF86AudioLowerVolume wpctl\ set-volume\ @DEFAULT_AUDIO_SINK@\ 5%-
+  add_key XF86AudioMute wpctl\ set-mute\ @DEFAULT_AUDIO_SINK@\ toggle
   openbox --reconfigure 2>/dev/null || true
-  echo "Openbox: tema SoProprio, 1 área de trabalho; Ctrl+Alt+T terminal, Ctrl+Alt+F Firefox, Ctrl+Alt+C VS Code."
+  echo "Openbox: tema SoProprio, 1 área de trabalho; Ctrl+Alt+T terminal, Ctrl+Alt+F Firefox, Ctrl+Alt+C VS Code, Super+L bloqueia, Print captura a tela, teclas de brilho e volume."
 fi
 
 # --- Bluetooth: o tuning antigo o desativava; religa para o ícone funcionar ---

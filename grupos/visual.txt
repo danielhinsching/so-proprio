@@ -6,3 +6,7 @@ pipewire-audio        # som (PipeWire + PulseAudio + ALSA); sem isso o volume n�
 pavucontrol-qt        # mixer de volume (clique no ícone de som)
 papirus-icon-theme    # ícones limpos e achatados (claro e escuro)
 fonts-inter           # fonte limpa, a mais próxima da do macOS/Windows 11
+brightnessctl         # teclas de brilho do teclado
+cbatticon             # ícone de bateria com os ícones do tema (o do LXQt é um gráfico de pizza)
+screengrab            # captura de tela (tecla Print)
+light-locker          # tela de bloqueio (Super+L), usa o LightDM

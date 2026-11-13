@@ -318,3 +318,74 @@ S
   SO_PROPRIO_SUDO="$TMP/badsudo" run bash "$REPO/grupos/base.sh"
   [ "$status" -ne 0 ]
 }
+
+# --- segunda rodada de ajustes do visual ---
+
+@test "a dock de baixo se esconde sozinha e a barra de cima não" {
+  run_visual
+  c="$(panel_conf)"
+  awk '/^\[panel1\]/{p=1;next} /^\[/{p=0} p' "$c" | grep -qx 'hidable=true'
+  awk '/^\[panel1\]/{p=1;next} /^\[/{p=0} p' "$c" | grep -qx 'reserve-space=false'
+  awk '/^\[panel2\]/{p=1;next} /^\[/{p=0} p' "$c" | grep -qx 'hidable=false'
+}
+
+@test "um painel da versão antiga (so_proprio=1) é regerado com a versão nova" {
+  mkdir -p "$HOME/.config/lxqt"
+  printf '[General]\nso_proprio=1\n[panel1]\nhidable=false\n' > "$(panel_conf)"
+  run_visual
+  grep -qx 'so_proprio=2' "$(panel_conf)"
+  awk '/^\[panel1\]/{p=1;next} /^\[/{p=0} p' "$(panel_conf)" | grep -qx 'hidable=true'
+}
+
+@test "o botão do menu usa um ícone próprio, instalado no tema hicolor" {
+  run_visual
+  grep -qx 'icon=so-proprio-menu' "$(panel_conf)"
+  i="$HOME/.local/share/icons/hicolor/64x64/apps/so-proprio-menu.png"
+  [ "$(head -c 8 "$i" | od -An -tx1 | tr -d ' \n')" = "89504e470d0a1a0a" ]
+}
+
+@test "a bateria usa o cbatticon e o ícone de pizza do LXQt é desligado" {
+  run_visual
+  grep -qx 'showIcon=false' "$HOME/.config/lxqt/lxqt-powermanagement.conf"
+  grep -q '^Exec=cbatticon' "$HOME/.config/autostart/so-proprio-bateria.desktop"
+}
+
+@test "teclas de brilho, volume, Print e bloqueio de tela estão no Openbox" {
+  run_visual
+  rc="$HOME/.config/openbox/rc.xml"
+  for k in XF86MonBrightnessUp XF86MonBrightnessDown XF86AudioRaiseVolume XF86AudioLowerVolume XF86AudioMute Print W-l; do
+    grep -q "key=\"$k\"" "$rc" || { echo "falta $k"; return 1; }
+  done
+  grep -q '<command>brightnessctl set +5%</command>' "$rc"
+  grep -q '<command>brightnessctl set 5%-</command>' "$rc"
+  grep -q '<command>screengrab -r</command>' "$rc"
+  grep -q '<command>light-locker-command -l</command>' "$rc"
+  xmllint --noout "$rc"
+}
+
+@test "o touchpad usa rolagem invertida (natural) e toque para clicar" {
+  run_visual
+  f="$ROOT_PREFIX/etc/X11/xorg.conf.d/40-so-proprio-touchpad.conf"
+  grep -q 'Option "NaturalScrolling" "true"' "$f"
+  grep -q 'Option "Tapping" "on"' "$f"
+  grep -q 'MatchIsTouchpad "on"' "$f"
+}
+
+@test "o VS Code e o Firefox são pré-carregados em segundo plano depois do login" {
+  run_visual
+  a="$HOME/.config/autostart/so-proprio-precarga.desktop"
+  grep -q '^Exec=.*ionice -c3' "$a"
+  grep -q '/usr/share/code' "$a"
+  grep -q '/usr/lib/firefox-esr' "$a"
+}
+
+@test "visual.txt traz brilho, bateria, captura de tela e bloqueio" {
+  source "$REPO/lib/add-lib.sh"
+  for p in brightnessctl cbatticon screengrab light-locker; do
+    read_packages "$REPO/grupos/visual.txt" | grep -qx "$p" || { echo "falta $p"; return 1; }
+  done
+}
+
+@test "o ícone do menu existe no repo como PNG" {
+  [ "$(head -c 8 "$REPO/dotfiles/icons/so-proprio-menu.png" | od -An -tx1 | tr -d ' \n')" = "89504e470d0a1a0a" ]
+}

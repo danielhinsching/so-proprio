@@ -62,6 +62,8 @@ Ordem sugerida: `base` → `tuning` → `desktop` → `visual` → `navegador` �
 
 Para atualizar um sistema que já está instalado: `git pull`, depois `./add base`, `./add tuning`, `./add visual` e `./add navegador` (rodar de novo é seguro). Depois do `visual`, faça logout e login.
 
+**Teclas e extras do `visual`:** Super+L bloqueia a tela (light-locker, pelo LightDM); Print captura a tela (ScreenGrab, seleção de área); teclas de brilho (`brightnessctl`) e de volume (`wpctl`) funcionam; a bateria usa o `cbatticon` (o ícone do LXQt é um gráfico de pizza); o touchpad usa rolagem invertida e toque para clicar (vale no próximo login); a dock de baixo se esconde e aparece ao encostar o mouse na borda; VS Code e Firefox são lidos para a memória 20 s depois do login, para abrirem rápido no HD.
+
 **Tema claro ou escuro:** o padrão é claro. Para o escuro: `SO_PROPRIO_TEMA=escuro ./add visual` (volte com `./add visual`). Isso troca tema do LXQt, ícones, janelas do Openbox, apps GTK e papel de parede de uma vez. O Conky tem fundo escuro fixo; edite `~/.config/conky/conky.conf` se quiser outra cor.
 
 **Painel e atalhos:** o `visual` só regera o painel se faltar a marca `so_proprio=1` em `~/.config/lxqt/panel.conf`, então suas edições ficam. Para voltar ao do repo: `SO_PROPRIO_VISUAL_FORCE=1 ./add visual` (o anterior fica em `panel.conf.so-proprio.bak`). Os atalhos ficam em `~/.config/openbox/rc.xml`.
