@@ -16,3 +16,4 @@ fonts-dejavu-core
 breeze-icon-theme             # ícones do menu e do gerenciador de arquivos
 gvfs                          # montar pendrive e HD externo no PCManFM-Qt
 udisks2
+conky-std                     # free -h e systemd-analyze no fundo da tela

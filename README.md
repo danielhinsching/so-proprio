@@ -51,7 +51,7 @@ A ideia: instalar só a base, e depois adicionar um grupo de cada vez com `./add
 |---|---|
 | `base` | sudo, NetworkManager (com Wi-Fi), git, curl, gnupg, htop, zram |
 | `tuning` | ajustes de HD: `noatime`, `swappiness=10`, zram (zstd, 25%), agendador `bfq`, desativa Bluetooth/CUPS/Avahi/ModemManager se existirem |
-| `desktop` | LXQt + Openbox, LightDM, QTerminal, PCManFM-Qt, gerenciamento de energia |
+| `desktop` | LXQt + Openbox, LightDM, QTerminal, PCManFM-Qt, gerenciamento de energia, Conky com `free -h` e `systemd-analyze` no canto superior direito da tela |
 | `navegador` | Firefox ESR |
 | `dev` | Python (venv, pipx), build-essential, VS Code (repositório Microsoft), fnm para Node.js |
 | `vm` | VirtualBox (repositório Oracle) |
@@ -69,6 +69,9 @@ Os grupos são instalados **sem pacotes recomendados**, para ocupar menos o HD. 
 O histórico de execuções fica em `~/.local/state/so-proprio/add.log`.
 
 ## Medir
+
+O Conky já mostra `free -h` e `systemd-analyze` no fundo da tela. Para mudar posição, cores ou o que aparece, edite `~/.config/conky/conky.conf` (o `./add desktop` não sobrescreve suas mudanças).
+
 
 Compare antes (Ubuntu antigo) e depois:
 

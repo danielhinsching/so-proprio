@@ -275,3 +275,29 @@ A
     read_packages "$REPO/grupos/desktop.txt" | grep -qx "$p"
   done
 }
+
+# --- Conky: free -h e systemd-analyze no fundo da tela ---
+
+@test "desktop.sh instala a config do Conky com free -h e systemd-analyze, e o autostart" {
+  mkdir -p "$TMP/home"
+  HOME="$TMP/home" bash "$REPO/grupos/desktop.sh"
+  conf="$TMP/home/.config/conky/conky.conf"
+  grep -q 'execi 10 free -h' "$conf"
+  grep -q 'systemd-analyze' "$conf"
+  grep -q "own_window_hints = 'undecorated,below,sticky,skip_taskbar,skip_pager'" "$conf"
+  auto="$TMP/home/.config/autostart/conky-so-proprio.desktop"
+  grep -qx 'Type=Application' "$auto"
+  grep -q '^Exec=.*conky' "$auto"
+}
+
+@test "desktop.sh não sobrescreve uma config do Conky já editada" {
+  mkdir -p "$TMP/home/.config/conky"
+  echo '-- minha config' > "$TMP/home/.config/conky/conky.conf"
+  HOME="$TMP/home" bash "$REPO/grupos/desktop.sh"
+  [ "$(cat "$TMP/home/.config/conky/conky.conf")" = '-- minha config' ]
+}
+
+@test "desktop.txt inclui o conky" {
+  source "$REPO/lib/add-lib.sh"
+  read_packages "$REPO/grupos/desktop.txt" | grep -qx conky-std
+}
