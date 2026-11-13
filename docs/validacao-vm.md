@@ -23,7 +23,7 @@ Executado num Linux de teste (Ubuntu 24.04, não Debian), sem VM:
 3. Copiar o repositório para a VM e rodar, anotando erros:
    - [x] `./add base` e depois `./add base` de novo → "nada a instalar"
    - [x] `./add tuning`, reiniciar, conferir: `findmnt -no OPTIONS /` contém `noatime`; `cat /proc/sys/vm/swappiness` = 10; `cat /proc/swaps` mostra `/dev/zram0` (ou `sudo zramctl`; ele fica em /usr/sbin); `cat /sys/block/sda/queue/scheduler` mostra `[bfq]`
-   - [ ] `./add desktop`, reiniciar → tela do LightDM e sessão LXQt. Anotar `free -h` logo após o login e `systemd-analyze`
+   - [x] `./add desktop`, reiniciar → tela do LightDM e sessão LXQt. Anotar `free -h` logo após o login e `systemd-analyze`
    - [ ] `./add navegador` → Firefox ESR abre
    - [ ] `./add dev` → `code` abre; terminal novo, `fnm install --lts`, `node -v`
    - [ ] `./add claude` → mostra a URL e o comando, `claude` abre num terminal novo
@@ -41,6 +41,8 @@ Executado num Linux de teste (Ubuntu 24.04, não Debian), sem VM:
 | `zramswap` | active |
 | RAM em repouso (sem desktop) | 324 MiB usados |
 | boot | 7,79 s (kernel 5,41 s + userspace 2,39 s) |
+| RAM em repouso com LXQt + Openbox | 496 MiB usados |
+| boot com desktop | 11,17 s (kernel 9,07 s + userspace 2,10 s) |
 
 ## 3. Notebook — só depois da VM e do backup
 
