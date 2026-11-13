@@ -24,7 +24,7 @@ Architectures: amd64
 Signed-By: $KEYRING
 SRC
   sudo apt-get update
-  sudo apt-get install -y code
+  sudo apt-get install -y --no-install-recommends code
 fi
 
 if command -v fnm >/dev/null 2>&1 || [ -x "$HOME/.local/share/fnm/fnm" ]; then

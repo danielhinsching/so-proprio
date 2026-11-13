@@ -1,10 +1,15 @@
 # Desktop leve: LXQt + Openbox, login com LightDM
+# Instalado sem recomendados; o que é preciso e vinha só como recomendado está aqui.
 xserver-xorg-core
+xserver-xorg-input-libinput   # teclado, mouse e touchpad
+libgl1-mesa-dri               # aceleração da GPU (Radeon Vega)
 xinit
 lightdm
 lightdm-gtk-greeter
 openbox
 obconf-qt
 lxqt-core
+lxqt-powermanagement          # bateria, tampa e suspensão do notebook
 qterminal
 pcmanfm-qt
+fonts-dejavu-core

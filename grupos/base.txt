@@ -1,6 +1,7 @@
 # Base mínima: rede, sudo e ferramentas essenciais
 sudo
 network-manager
+wpasupplicant          # Wi-Fi no NetworkManager (vinha só como recomendado)
 git
 curl
 ca-certificates

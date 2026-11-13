@@ -49,9 +49,9 @@ A ideia: instalar só a base, e depois adicionar um grupo de cada vez com `./add
 
 | Grupo | O que traz |
 |---|---|
-| `base` | sudo, NetworkManager, git, curl, gnupg, htop, zram |
+| `base` | sudo, NetworkManager (com Wi-Fi), git, curl, gnupg, htop, zram |
 | `tuning` | ajustes de HD: `noatime`, `swappiness=10`, zram (zstd, 25%), agendador `bfq`, desativa Bluetooth/CUPS/Avahi/ModemManager se existirem |
-| `desktop` | LXQt + Openbox, LightDM, QTerminal, PCManFM-Qt |
+| `desktop` | LXQt + Openbox, LightDM, QTerminal, PCManFM-Qt, gerenciamento de energia |
 | `navegador` | Firefox ESR |
 | `dev` | Python (venv, pipx), build-essential, VS Code (repositório Microsoft), fnm para Node.js |
 | `vm` | VirtualBox (repositório Oracle) |
@@ -61,6 +61,8 @@ Ordem sugerida: `base` → `tuning` → `desktop` → `navegador` → `dev` → 
 
 Depois do `dev`: o Node.js LTS já vem instalado; abra um terminal novo para usar `node` e `npm`.
 Depois do `vm`: faça logout/login. Com Secure Boot ativo, os módulos do VirtualBox precisam ser assinados ou o Secure Boot desativado no BIOS.
+
+Os grupos são instalados **sem pacotes recomendados**, para ocupar menos o HD. Para instalar um grupo com os recomendados: `SO_PROPRIO_RECOMMENDS=1 ./add <grupo>`.
 
 O histórico de execuções fica em `~/.local/state/so-proprio/add.log`.
 

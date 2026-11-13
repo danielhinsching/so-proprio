@@ -87,7 +87,7 @@ A
   fake_cmds "git"
   run "$REPO/add" --yes base
   [ "$status" -eq 0 ]
-  grep -q 'install -y curl' "$FAKE_APT_LOG"
+  grep -q 'install -y --no-install-recommends curl' "$FAKE_APT_LOG"
   ! grep -q ' git' "$FAKE_APT_LOG"
 }
 
@@ -107,7 +107,7 @@ A
   fake_cmds ""
   run "$REPO/add" --yes dev
   [ "$status" -eq 0 ]
-  [ "$(sed -n 2p "$FAKE_APT_LOG")" = "apt install -y git" ]
+  [ "$(sed -n 2p "$FAKE_APT_LOG")" = "apt install -y --no-install-recommends git" ]
   [ "$(tail -1 "$FAKE_APT_LOG")" = "script" ]
   grep -q 'dev' "$XDG_STATE_HOME/so-proprio/add.log"
 }
@@ -170,7 +170,7 @@ A
   run "$REPO/add" --yes base
   [ "$status" -eq 0 ]
   [ "$(head -1 "$FAKE_APT_LOG")" = "apt update" ]
-  [ "$(sed -n 2p "$FAKE_APT_LOG")" = "apt install -y curl" ]
+  [ "$(sed -n 2p "$FAKE_APT_LOG")" = "apt install -y --no-install-recommends curl" ]
 }
 
 @test "recusa rodar como root, exceto tuning" {
@@ -234,4 +234,26 @@ A
   [ "$(grep -c 'so-proprio: ~/.local/bin' "$TMP/home/.bashrc")" -eq 1 ]
   run env -i HOME="$TMP/home" bash -c 'source "$HOME/.bashrc"; command -v claude'
   [ "$output" = "$TMP/home/.local/bin/claude" ]
+}
+
+# --- Sem pacotes recomendados ---
+
+@test "SO_PROPRIO_RECOMMENDS=1 instala com os recomendados" {
+  printf 'curl\n' > "$GRUPOS_DIR/base.txt"
+  fake_cmds ""
+  run env SO_PROPRIO_RECOMMENDS=1 "$REPO/add" --yes base
+  [ "$status" -eq 0 ]
+  grep -qx 'apt install -y curl' "$FAKE_APT_LOG"
+}
+
+@test "scripts de grupo instalam sem recomendados" {
+  ! grep -nE 'apt-get install -y' "$REPO"/grupos/*.sh | grep -v -- '--no-install-recommends'
+}
+
+@test "itens que vinham só como recomendados estão explícitos" {
+  source "$REPO/lib/add-lib.sh"
+  read_packages "$REPO/grupos/base.txt" | grep -qx wpasupplicant
+  for p in lxqt-powermanagement xserver-xorg-input-libinput libgl1-mesa-dri fonts-dejavu-core; do
+    read_packages "$REPO/grupos/desktop.txt" | grep -qx "$p"
+  done
 }

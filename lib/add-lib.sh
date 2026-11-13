@@ -90,7 +90,10 @@ run_group() {
       log_event "$name falhou (apt update)"
       return 1
     fi
-    if ! "${apt_cmd[@]}" install -y "${missing[@]}"; then
+    # Sem recomendados por padrão: menos pacotes no HD. SO_PROPRIO_RECOMMENDS=1 volta ao padrão do apt.
+    local -a install_opts=(-y)
+    [ "${SO_PROPRIO_RECOMMENDS:-0}" = "1" ] || install_opts+=(--no-install-recommends)
+    if ! "${apt_cmd[@]}" install "${install_opts[@]}" "${missing[@]}"; then
       echo "ERRO: falha ao instalar: ${missing[*]}" >&2
       log_event "$name falhou (pacotes: ${missing[*]})"
       return 1

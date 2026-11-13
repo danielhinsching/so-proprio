@@ -27,7 +27,7 @@ if [ -z "$PKG" ]; then
   exit 1
 fi
 echo "VirtualBox: instalando $PKG."
-sudo apt-get install -y "$PKG"
+sudo apt-get install -y --no-install-recommends "$PKG"
 sudo usermod -aG vboxusers "$USER"
 echo "Faça logout e login para usar o VirtualBox (grupo vboxusers)."
 echo "Se o Secure Boot estiver ativo, os módulos precisam ser assinados ou o Secure Boot desativado."
