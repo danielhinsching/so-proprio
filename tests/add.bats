@@ -143,3 +143,20 @@ A
 @test "todos os .sh de grupos passam no shellcheck" {
   shellcheck "$REPO"/grupos/*.sh
 }
+
+# --- Task 5: atalho tuning ---
+
+@test "add sem argumentos lista tuning" {
+  run env -u GRUPOS_DIR "$REPO/add"
+  printf '%s\n' "$output" | grep -qx '  tuning'
+}
+
+@test "add tuning chama tuning/apply.sh e respeita --dry-run" {
+  mkdir -p "$TMP/root/etc"
+  printf 'UUID=a / ext4 defaults 0 1\n' > "$TMP/root/etc/fstab"
+  run env ROOT_PREFIX="$TMP/root" "$REPO/add" --dry-run tuning
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Ajustes de HD"* ]]
+  [[ "$output" == *"dry-run"* ]]
+  [ ! -e "$TMP/root/etc/fstab.so-proprio.bak" ]
+}

@@ -27,13 +27,21 @@ export DRY_RUN ASSUME_YES
 
 show_groups() {
   echo "Grupos disponíveis:"
-  list_groups "$GRUPOS_DIR" | sed 's/^/  /'
+  { list_groups "$GRUPOS_DIR"; echo tuning; } | sort -u | sed 's/^/  /'
 }
 
 if [ "$HAS_GROUP" -eq 0 ]; then
   echo "Uso: ./add [--dry-run] [--yes] <grupo>"
   show_groups
   exit 0
+fi
+
+# Grupo especial: ajustes de HD.
+if [ "$GROUP" = "tuning" ]; then
+  args=()
+  [ "$DRY_RUN" -eq 1 ] && args+=(--dry-run)
+  [ "$ASSUME_YES" -eq 1 ] && args+=(--yes)
+  exec "$REPO_DIR/tuning/apply.sh" "${args[@]}"
 fi
 
 if ! is_group "$GRUPOS_DIR" "$GROUP"; then
