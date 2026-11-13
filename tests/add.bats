@@ -142,7 +142,7 @@ A
 }
 
 @test "todos os .sh de grupos passam no shellcheck" {
-  shellcheck "$REPO"/grupos/*.sh
+  shellcheck -x "$REPO"/grupos/*.sh
 }
 
 # --- Task 5: atalho tuning ---

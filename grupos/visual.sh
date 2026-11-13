@@ -6,6 +6,7 @@
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source-path=SCRIPTDIR/..
 # shellcheck source=lib/ini.sh
 source "$REPO_DIR/lib/ini.sh"
 
