@@ -52,7 +52,7 @@ A ideia: instalar só a base, e depois adicionar um grupo de cada vez com `./add
 | `base` | sudo, NetworkManager (com Wi-Fi), git, curl, gnupg, htop, zram; comenta o `/etc/network/interfaces` para o NetworkManager assumir a rede (original em `interfaces.so-proprio.bak`) |
 | `tuning` | ajustes de HD: `noatime`, `swappiness=10`, zram (zstd, 25%), agendador `bfq`, `GRUB_TIMEOUT=1` (menu do GRUB espera 1 s), desativa CUPS/Avahi/ModemManager se existirem |
 | `desktop` | LXQt + Openbox, LightDM, QTerminal, PCManFM-Qt, gerenciamento de energia, Conky com `free -h` e `systemd-analyze` no canto superior direito da tela |
-| `visual` | tema escuro, painel (dock central com menu, apps e janelas; barra em cima com rede, Bluetooth, bateria, volume e hora), 1 área de trabalho e atalhos: **Ctrl+Alt+T** terminal, **Ctrl+Alt+F** Firefox, **Ctrl+Alt+C** VS Code |
+| `visual` | visual limpo (estilo macOS/Windows 11): tema claro, ícones Papirus, fonte Inter, janelas planas, papel de parede suave, painel (dock central com menu, apps e janelas; barra em cima com rede, Bluetooth, bateria, volume e hora), 1 área de trabalho e atalhos: **Ctrl+Alt+T** terminal, **Ctrl+Alt+F** Firefox, **Ctrl+Alt+C** VS Code |
 | `navegador` | Firefox ESR com preferências de baixo consumo (cache em memória, menos processos), uBlock Origin e sem telemetria |
 | `dev` | Python (venv, pipx), build-essential, VS Code (repositório Microsoft), fnm para Node.js |
 | `vm` | VirtualBox (repositório Oracle). Opcional |
@@ -61,6 +61,8 @@ A ideia: instalar só a base, e depois adicionar um grupo de cada vez com `./add
 Ordem sugerida: `base` → `tuning` → `desktop` → `visual` → `navegador` → `dev` → `claude` (e `vm`, se precisar).
 
 Para atualizar um sistema que já está instalado: `git pull`, depois `./add base`, `./add tuning`, `./add visual` e `./add navegador` (rodar de novo é seguro). Depois do `visual`, faça logout e login.
+
+**Tema claro ou escuro:** o padrão é claro. Para o escuro: `SO_PROPRIO_TEMA=escuro ./add visual` (volte com `./add visual`). Isso troca tema do LXQt, ícones, janelas do Openbox, apps GTK e papel de parede de uma vez. O Conky tem fundo escuro fixo; edite `~/.config/conky/conky.conf` se quiser outra cor.
 
 **Painel e atalhos:** o `visual` só regera o painel se faltar a marca `so_proprio=1` em `~/.config/lxqt/panel.conf`, então suas edições ficam. Para voltar ao do repo: `SO_PROPRIO_VISUAL_FORCE=1 ./add visual` (o anterior fica em `panel.conf.so-proprio.bak`). Os atalhos ficam em `~/.config/openbox/rc.xml`.
 

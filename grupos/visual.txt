@@ -4,3 +4,5 @@ bluez                 # Bluetooth
 blueman               # ícone e gerenciador de Bluetooth
 pipewire-audio        # som (PipeWire + PulseAudio + ALSA); sem isso o volume não existe
 pavucontrol-qt        # mixer de volume (clique no ícone de som)
+papirus-icon-theme    # ícones limpos e achatados (claro e escuro)
+fonts-inter           # fonte limpa, a mais próxima da do macOS/Windows 11

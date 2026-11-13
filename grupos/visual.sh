@@ -13,11 +13,111 @@ source "$REPO_DIR/lib/ini.sh"
 LXQT_DIR="$HOME/.config/lxqt"
 PANEL="$LXQT_DIR/panel.conf"
 
-# --- Tema do LXQt ---
-ini_set "$LXQT_DIR/lxqt.conf" General theme dark
-ini_set "$LXQT_DIR/lxqt.conf" General icon_theme breeze-dark
-ini_set "$LXQT_DIR/lxqt.conf" General style Fusion
-echo "LXQt: tema escuro."
+# --- Aparência: claro (padrão) ou escuro, com SO_PROPRIO_TEMA=escuro ---
+if [ "${SO_PROPRIO_TEMA:-claro}" = "escuro" ]; then
+  MODE=escuro; LXQT_THEME=dark; ICONS=Papirus-Dark; PREFER_DARK=true
+  BG='#1c1c1e'; BG_INACTIVE='#2c2c2e'; TEXT='#f5f5f7'; SUBTLE='#8e8e93'
+  BORDER='#3a3a3c'; HOVER='#3a3a3c'; PRESSED='#48484a'; MENU='#2c2c2e'
+else
+  MODE=claro; LXQT_THEME=light; ICONS=Papirus; PREFER_DARK=false
+  BG='#f5f5f7'; BG_INACTIVE='#ececec'; TEXT='#1d1d1f'; SUBTLE='#8e8e93'
+  BORDER='#d2d2d7'; HOVER='#e5e5ea'; PRESSED='#d1d1d6'; MENU='#ffffff'
+fi
+ACCENT='#0a84ff'
+
+ini_set "$LXQT_DIR/lxqt.conf" General theme "$LXQT_THEME"
+ini_set "$LXQT_DIR/lxqt.conf" General icon_theme "$ICONS"
+ini_set "$LXQT_DIR/lxqt.conf" Qt style Fusion
+ini_set "$LXQT_DIR/lxqt.conf" Qt font '"Inter,10,-1,5,50,0,0,0,0,0"'
+ini_set "$HOME/.config/gtk-3.0/settings.ini" Settings gtk-font-name 'Inter 10'
+ini_set "$HOME/.config/gtk-3.0/settings.ini" Settings gtk-icon-theme-name "$ICONS"
+ini_set "$HOME/.config/gtk-3.0/settings.ini" Settings gtk-application-prefer-dark-theme "$PREFER_DARK"
+
+WALL="$HOME/.local/share/so-proprio/wallpaper.png"
+mkdir -p "$(dirname "$WALL")"
+cp "$REPO_DIR/dotfiles/wallpaper/$MODE.png" "$WALL"
+ini_set "$HOME/.config/pcmanfm-qt/lxqt/settings.conf" Desktop Wallpaper "$WALL"
+ini_set "$HOME/.config/pcmanfm-qt/lxqt/settings.conf" Desktop WallpaperMode zoom
+echo "Aparência: tema $MODE, ícones $ICONS, fonte Inter, papel de parede novo."
+
+# --- Tema das janelas do Openbox (SoProprio): plano, sem bordas pesadas ---
+OB_THEME="$HOME/.themes/SoProprio/openbox-3"
+mkdir -p "$OB_THEME"
+{
+  cat <<THEME
+border.width: 1
+padding.width: 10
+padding.height: 8
+window.handle.width: 0
+window.client.padding.width: 0
+menu.overlap: 0
+window.label.text.justify: center
+window.active.border.color: $BORDER
+window.inactive.border.color: $BORDER
+window.active.title.separator.color: $BG
+window.inactive.title.separator.color: $BG_INACTIVE
+window.active.title.bg: flat solid
+window.active.title.bg.color: $BG
+window.inactive.title.bg: flat solid
+window.inactive.title.bg.color: $BG_INACTIVE
+window.active.label.bg: parentrelative
+window.inactive.label.bg: parentrelative
+window.active.label.text.color: $TEXT
+window.inactive.label.text.color: $SUBTLE
+window.active.handle.bg: flat solid
+window.active.handle.bg.color: $BG
+window.inactive.handle.bg: flat solid
+window.inactive.handle.bg.color: $BG_INACTIVE
+window.active.grip.bg: flat solid
+window.active.grip.bg.color: $BG
+window.inactive.grip.bg: flat solid
+window.inactive.grip.bg.color: $BG_INACTIVE
+menu.border.width: 1
+menu.border.color: $BORDER
+menu.separator.color: $BORDER
+menu.separator.width: 1
+menu.separator.padding.width: 6
+menu.separator.padding.height: 3
+menu.title.bg: flat solid
+menu.title.bg.color: $BG
+menu.title.text.color: $SUBTLE
+menu.title.text.justify: left
+menu.items.bg: flat solid
+menu.items.bg.color: $MENU
+menu.items.text.color: $TEXT
+menu.items.disabled.text.color: $SUBTLE
+menu.items.active.bg: flat solid
+menu.items.active.bg.color: $ACCENT
+menu.items.active.text.color: #ffffff
+menu.items.active.disabled.text.color: #ffffff
+osd.border.width: 1
+osd.border.color: $BORDER
+osd.bg: flat solid
+osd.bg.color: $MENU
+osd.label.bg: parentrelative
+osd.label.text.color: $TEXT
+osd.hilight.bg: flat solid
+osd.hilight.bg.color: $ACCENT
+osd.unhilight.bg: flat solid
+osd.unhilight.bg.color: $HOVER
+THEME
+  for win in active inactive; do
+    bgc="$BG"; [ "$win" = inactive ] && bgc="$BG_INACTIVE"
+    img="$TEXT"; [ "$win" = inactive ] && img="$SUBTLE"
+    for st in unpressed pressed hover disabled toggled; do
+      c="$bgc"; ic="$img"
+      [ "$st" = hover ] && { c="$HOVER"; ic="$TEXT"; }
+      [ "$st" = pressed ] && { c="$PRESSED"; ic="$TEXT"; }
+      [ "$st" = disabled ] && ic="$SUBTLE"
+      printf 'window.%s.button.%s.bg: flat solid\n' "$win" "$st"
+      printf 'window.%s.button.%s.bg.color: %s\n' "$win" "$st" "$c"
+      printf 'window.%s.button.%s.image.color: %s\n' "$win" "$st" "$ic"
+    done
+  done
+} > "$OB_THEME/themerc"
+for f in close iconify max max_toggled desk desk_toggled shade shade_toggled; do
+  cp "$REPO_DIR/dotfiles/openbox/$f.xbm" "$OB_THEME/$f.xbm"
+done
 
 # --- Painel ---
 if [ -f "$PANEL" ] && grep -qx 'so_proprio=1' "$PANEL" && [ "${SO_PROPRIO_VISUAL_FORCE:-0}" != "1" ]; then
@@ -116,7 +216,6 @@ fi
 # --- Openbox: uma área de trabalho e atalhos ---
 RC="$HOME/.config/openbox/rc.xml"
 DEFAULT_RC="${OPENBOX_DEFAULT_RC:-/etc/xdg/openbox/rc.xml}"
-THEMES_DIR="${SO_PROPRIO_THEMES_DIR:-/usr/share/themes}"
 if [ ! -f "$RC" ]; then
   if [ -f "$DEFAULT_RC" ]; then
     mkdir -p "$(dirname "$RC")"
@@ -127,9 +226,7 @@ if [ ! -f "$RC" ]; then
 fi
 if [ -f "$RC" ]; then
   sed -i '/<desktops>/,/<\/desktops>/ s|<number>[0-9]*</number>|<number>1</number>|' "$RC"
-  if [ -d "$THEMES_DIR/Onyx/openbox-3" ]; then
-    sed -i '/<theme>/,/<\/theme>/ s|<name>Clearlooks</name>|<name>Onyx</name>|' "$RC"
-  fi
+  sed -i -E '/<theme>/,/<\/theme>/ { s#<name>(Clearlooks|Onyx|SoProprio)</name>#<name>SoProprio</name>#; s#<titleLayout>[A-Z]*</titleLayout>#<titleLayout>LIMC</titleLayout># }' "$RC"
   add_key() { # <tecla> <comando>
     grep -q "key=\"$1\"" "$RC" && return 0
     sed -i "s|</keyboard>|  <keybind key=\"$1\"><action name=\"Execute\"><command>$2</command></action></keybind>\n</keyboard>|" "$RC"
@@ -138,7 +235,7 @@ if [ -f "$RC" ]; then
   add_key C-A-f firefox-esr
   add_key C-A-c code
   openbox --reconfigure 2>/dev/null || true
-  echo "Openbox: 1 área de trabalho; Ctrl+Alt+T terminal, Ctrl+Alt+F Firefox, Ctrl+Alt+C VS Code."
+  echo "Openbox: tema SoProprio, 1 área de trabalho; Ctrl+Alt+T terminal, Ctrl+Alt+F Firefox, Ctrl+Alt+C VS Code."
 fi
 
 # --- Bluetooth: o tuning antigo o desativava; religa para o ícone funcionar ---

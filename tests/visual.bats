@@ -22,7 +22,7 @@ S
   cat > "$TMP/xdg/openbox/rc.xml" <<'X'
 <?xml version="1.0" encoding="UTF-8"?>
 <openbox_config xmlns="http://openbox.org/3.4/rc">
-  <theme><name>Clearlooks</name></theme>
+  <theme><name>Clearlooks</name><titleLayout>NLIMC</titleLayout></theme>
   <desktops><number>4</number><firstdesk>1</firstdesk></desktops>
   <keyboard>
     <keybind key="A-F4"><action name="Close"/></keybind>
@@ -30,8 +30,6 @@ S
 </openbox_config>
 X
   export OPENBOX_DEFAULT_RC="$TMP/xdg/openbox/rc.xml"
-  export SO_PROPRIO_THEMES_DIR="$TMP/themes"
-  mkdir -p "$SO_PROPRIO_THEMES_DIR/Onyx/openbox-3"
 }
 
 teardown() { rm -rf "$TMP"; }
@@ -110,9 +108,32 @@ panel_conf() { echo "$HOME/.config/lxqt/panel.conf"; }
   [ "$(grep -c 'key="C-A-t"' "$HOME/.config/openbox/rc.xml")" -eq 1 ]
 }
 
-@test "visual.sh usa o tema escuro do Openbox quando ele existe" {
+@test "visual.sh usa o tema limpo SoProprio no Openbox, com botões à direita e sem o de áreas de trabalho" {
   run_visual
-  grep -q '<name>Onyx</name>' "$HOME/.config/openbox/rc.xml"
+  rc="$HOME/.config/openbox/rc.xml"
+  grep -q '<name>SoProprio</name>' "$rc"
+  grep -q '<titleLayout>LIMC</titleLayout>' "$rc"
+  t="$HOME/.themes/SoProprio/openbox-3"
+  [ -f "$t/themerc" ]
+  for b in close iconify max max_toggled; do [ -f "$t/$b.xbm" ] || { echo "falta $b.xbm"; return 1; }; done
+  grep -q '^window.active.title.bg.color: #f5f5f7' "$t/themerc"
+  grep -q '^menu.items.active.bg.color: #0a84ff' "$t/themerc"
+}
+
+@test "o tema SoProprio do Openbox também troca o Onyx de uma execução anterior" {
+  mkdir -p "$HOME/.config/openbox"
+  sed 's/Clearlooks/Onyx/' "$OPENBOX_DEFAULT_RC" > "$HOME/.config/openbox/rc.xml"
+  run_visual
+  grep -q '<name>SoProprio</name>' "$HOME/.config/openbox/rc.xml"
+}
+
+@test "SO_PROPRIO_TEMA=escuro usa a paleta escura em tudo" {
+  SO_PROPRIO_TEMA=escuro run_visual
+  grep -q '^window.active.title.bg.color: #1c1c1e' "$HOME/.themes/SoProprio/openbox-3/themerc"
+  awk '/^\[General\]/{p=1;next} /^\[/{p=0} p' "$HOME/.config/lxqt/lxqt.conf" | grep -qx 'theme=dark'
+  grep -qx 'icon_theme=Papirus-Dark' "$HOME/.config/lxqt/lxqt.conf"
+  grep -qx 'gtk-application-prefer-dark-theme=true' "$HOME/.config/gtk-3.0/settings.ini"
+  cmp -s "$HOME/.local/share/so-proprio/wallpaper.png" "$REPO/dotfiles/wallpaper/escuro.png"
 }
 
 @test "visual.sh mantém o rc.xml que o usuário já tinha, só acrescentando o que falta" {
@@ -123,9 +144,36 @@ panel_conf() { echo "$HOME/.config/lxqt/panel.conf"; }
   grep -q 'key="C-A-f"' "$HOME/.config/openbox/rc.xml"
 }
 
-@test "visual.sh escolhe o tema escuro do LXQt" {
+@test "visual.sh usa por padrão o tema claro do LXQt, ícones Papirus e a fonte Inter" {
   run_visual
-  awk '/^\[General\]/{p=1;next} /^\[/{p=0} p' "$HOME/.config/lxqt/lxqt.conf" | grep -qx 'theme=dark'
+  c="$HOME/.config/lxqt/lxqt.conf"
+  awk '/^\[General\]/{p=1;next} /^\[/{p=0} p' "$c" | grep -qx 'theme=light'
+  awk '/^\[General\]/{p=1;next} /^\[/{p=0} p' "$c" | grep -qx 'icon_theme=Papirus'
+  awk '/^\[Qt\]/{p=1;next} /^\[/{p=0} p' "$c" | grep -qx 'style=Fusion'
+  awk '/^\[Qt\]/{p=1;next} /^\[/{p=0} p' "$c" | grep -q '^font=.*Inter'
+}
+
+@test "visual.sh configura os apps GTK (Firefox, Blueman) com a mesma fonte e ícones" {
+  run_visual
+  g="$HOME/.config/gtk-3.0/settings.ini"
+  grep -qx 'gtk-font-name=Inter 10' "$g"
+  grep -qx 'gtk-icon-theme-name=Papirus' "$g"
+  grep -qx 'gtk-application-prefer-dark-theme=false' "$g"
+}
+
+@test "visual.sh instala o papel de parede limpo e aponta o PCManFM-Qt para ele" {
+  run_visual
+  w="$HOME/.local/share/so-proprio/wallpaper.png"
+  [ -s "$w" ]
+  s="$HOME/.config/pcmanfm-qt/lxqt/settings.conf"
+  grep -qx "Wallpaper=$w" "$s"
+  grep -qx 'WallpaperMode=zoom' "$s"
+}
+
+@test "os papéis de parede do repo são PNG" {
+  for f in claro escuro; do
+    [ "$(head -c 8 "$REPO/dotfiles/wallpaper/$f.png" | od -An -tx1 | tr -d ' \n')" = "89504e470d0a1a0a" ]
+  done
 }
 
 @test "visual.sh religa o Bluetooth, que o tuning antigo desativava" {
@@ -135,7 +183,7 @@ panel_conf() { echo "$HOME/.config/lxqt/panel.conf"; }
 
 @test "visual.txt traz rede, Bluetooth, volume e o mixer" {
   source "$REPO/lib/add-lib.sh"
-  for p in nm-tray blueman bluez pipewire-audio pavucontrol-qt; do
+  for p in nm-tray blueman bluez pipewire-audio pavucontrol-qt papirus-icon-theme fonts-inter; do
     read_packages "$REPO/grupos/visual.txt" | grep -qx "$p" || { echo "falta $p"; return 1; }
   done
 }
