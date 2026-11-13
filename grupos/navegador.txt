@@ -1,2 +1,4 @@
 # Navegador leve, em .deb
+# so-proprio: com-recomendados
+# (os recomendados do Firefox incluem os codecs de vídeo, como os do YouTube)
 firefox-esr

@@ -2,6 +2,8 @@
 sudo
 network-manager
 wpasupplicant          # Wi-Fi no NetworkManager (vinha só como recomendado)
+polkitd                # permite ao usuário mudar a rede sem sudo
+dbus-user-session      # barramento de sessão do usuário (desktop e apps)
 git
 curl
 ca-certificates

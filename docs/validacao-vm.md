@@ -50,6 +50,10 @@ Executado num Linux de teste (Ubuntu 24.04, não Debian), sem VM:
 | VirtualBox (repositório Oracle, trixie) | virtualbox-7.2 7.2.22r175245; chave aceita pelo apt do Debian 13 |
 | boot com desktop | 11,17 s (kernel 9,07 s + userspace 2,10 s) |
 
+### Mudança depois da VM: grupos sem recomendados (13/11)
+
+A VM foi validada **com** recomendados. Depois disso, os grupos passaram a instalar sem eles, e a revisão foi feita sem uma VM nova. Itens que eram só recomendados e foram mantidos de forma explícita: `wpasupplicant`, `polkitd`, `dbus-user-session` (base); `lxqt-powermanagement`, `xserver-xorg-input-libinput`, `libgl1-mesa-dri`, `fonts-dejavu-core`, `breeze-icon-theme`, `gvfs`, `udisks2` (desktop). O `navegador` continua com recomendados (codecs). Rede de segurança no notebook: `SO_PROPRIO_RECOMMENDS=1 ./add desktop`.
+
 ## 3. Notebook — só depois da VM e do backup
 
 | Medida | Ubuntu antigo | so-proprio |

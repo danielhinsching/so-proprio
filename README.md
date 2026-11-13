@@ -62,7 +62,9 @@ Ordem sugerida: `base` → `tuning` → `desktop` → `navegador` → `dev` → 
 Depois do `dev`: o Node.js LTS já vem instalado; abra um terminal novo para usar `node` e `npm`.
 Depois do `vm`: faça logout/login. Com Secure Boot ativo, os módulos do VirtualBox precisam ser assinados ou o Secure Boot desativado no BIOS.
 
-Os grupos são instalados **sem pacotes recomendados**, para ocupar menos o HD. Para instalar um grupo com os recomendados: `SO_PROPRIO_RECOMMENDS=1 ./add <grupo>`.
+Os grupos são instalados **sem pacotes recomendados**, para ocupar menos o HD. Para instalar um grupo com os recomendados: `SO_PROPRIO_RECOMMENDS=1 ./add <grupo>`. Um grupo que sempre precisa deles tem a linha `# so-proprio: com-recomendados` no seu `.txt` (é o caso do `navegador`, por causa dos codecs de vídeo).
+
+**Se faltar algo no desktop** (ícones, som, algum diálogo), rode `SO_PROPRIO_RECOMMENDS=1 ./add desktop`: ele instala só os recomendados que faltam.
 
 O histórico de execuções fica em `~/.local/state/so-proprio/add.log`.
 

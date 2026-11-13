@@ -13,3 +13,6 @@ lxqt-powermanagement          # bateria, tampa e suspensão do notebook
 qterminal
 pcmanfm-qt
 fonts-dejavu-core
+breeze-icon-theme             # ícones do menu e do gerenciador de arquivos
+gvfs                          # montar pendrive e HD externo no PCManFM-Qt
+udisks2

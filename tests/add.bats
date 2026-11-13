@@ -257,3 +257,21 @@ A
     read_packages "$REPO/grupos/desktop.txt" | grep -qx "$p"
   done
 }
+
+@test "grupo com '# so-proprio: com-recomendados' instala com recomendados" {
+  printf '# so-proprio: com-recomendados\nfirefox-esr\n' > "$GRUPOS_DIR/navegador.txt"
+  fake_cmds ""
+  run "$REPO/add" --yes navegador
+  [ "$status" -eq 0 ]
+  grep -qx 'apt install -y firefox-esr' "$FAKE_APT_LOG"
+}
+
+@test "revisão: navegador com recomendados; base e desktop com polkit, dbus, montagem de pendrive e ícones" {
+  source "$REPO/lib/add-lib.sh"
+  grep -qx '# so-proprio: com-recomendados' "$REPO/grupos/navegador.txt"
+  read_packages "$REPO/grupos/base.txt" | grep -qx polkitd
+  read_packages "$REPO/grupos/base.txt" | grep -qx dbus-user-session
+  for p in gvfs udisks2 breeze-icon-theme; do
+    read_packages "$REPO/grupos/desktop.txt" | grep -qx "$p"
+  done
+}
