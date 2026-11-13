@@ -200,3 +200,15 @@ A
   grep -q 'vscode.sources' "$REPO/grupos/dev.sh"
   ! grep -q '/etc/apt/keyrings/packages.microsoft.gpg' "$REPO/grupos/dev.sh"
 }
+
+# --- desktop.sh: Openbox já escolhido ---
+
+@test "desktop.sh configura o Openbox sem sobrescrever escolha existente" {
+  mkdir -p "$TMP/home"
+  HOME="$TMP/home" bash "$REPO/grupos/desktop.sh"
+  grep -qx 'window_manager=openbox' "$TMP/home/.config/lxqt/session.conf"
+  grep -qx '\[General\]' "$TMP/home/.config/lxqt/session.conf"
+  printf '[General]\nwindow_manager=xfwm4\n' > "$TMP/home/.config/lxqt/session.conf"
+  HOME="$TMP/home" bash "$REPO/grupos/desktop.sh"
+  grep -qx 'window_manager=xfwm4' "$TMP/home/.config/lxqt/session.conf"
+}
