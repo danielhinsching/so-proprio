@@ -300,7 +300,7 @@ I
   ini_set "$f" General theme light
   ini_set "$f" Outra a b
   [ "$(grep -c '^theme=' "$f")" -eq 1 ]
-  grep -qx 'theme=so-proprio-claro' "$f"; grep -qx 'style=Fusion' "$f"
+  grep -qx 'theme=light' "$f"; grep -qx 'style=Fusion' "$f"
   awk '/^\[Outra\]/{p=1;next} /^\[/{p=0} p' "$f" | grep -qx 'a=b'
 }
 
