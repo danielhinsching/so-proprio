@@ -18,7 +18,7 @@ for arg in "$@"; do
   esac
 done
 
-SERVICES=(bluetooth cups cups-browsed avahi-daemon ModemManager)
+SERVICES=(cups cups-browsed avahi-daemon ModemManager)
 
 cat <<PLAN
 == Ajustes de HD (raiz: ${ROOT:-/})
@@ -26,6 +26,7 @@ cat <<PLAN
 - $ROOT/etc/sysctl.d/99-so-proprio.conf: vm.swappiness=10
 - $ROOT/etc/default/zramswap: ALGO=zstd, PERCENT=25
 - $ROOT/etc/udev/rules.d/60-so-proprio-bfq.rules: agendador bfq em discos rotacionais
+- $ROOT/etc/default/grub: GRUB_TIMEOUT=1 (menu do GRUB espera 1 s em vez de 5 s)
 - Desativar, se existirem: ${SERVICES[*]}
 PLAN
 
@@ -49,6 +50,7 @@ set_noatime "$ROOT/etc/fstab"
 write_sysctl "$ROOT"
 write_zram "$ROOT"
 write_udev "$ROOT"
+set_grub_timeout "$ROOT"
 if [ -z "$ROOT" ]; then
   disable_services "${SERVICES[@]}"
 else
@@ -59,6 +61,7 @@ if [ -z "$ROOT" ]; then
   sysctl --system >/dev/null
   udevadm control --reload && udevadm trigger --subsystem-match=block
   systemctl restart zramswap.service 2>/dev/null || true
+  if command -v update-grub >/dev/null 2>&1; then update-grub; fi
   echo "Ajustes aplicados. Reinicie para o noatime valer em / e /home."
 else
   echo "Ajustes escritos em $ROOT."

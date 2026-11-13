@@ -81,6 +81,16 @@ ACTION=="add|change", KERNEL=="sd[a-z]*", ATTR{queue/rotational}=="1", ATTR{queu
 RULE
 }
 
+# set_grub_timeout <root>: o menu do GRUB espera 1 s em vez de 5 s no boot.
+set_grub_timeout() {
+  local f="$1/etc/default/grub"
+  if [ ! -f "$f" ]; then
+    echo "Aviso: $f não existe; GRUB_TIMEOUT não ajustado."
+    return 0
+  fi
+  _set_kv "$f" GRUB_TIMEOUT 1
+}
+
 # disable_services <nome>...: desativa as unidades .service, .socket e .path que existem
 # (socket/path reativariam o serviço sob demanda, por exemplo o CUPS ao imprimir).
 disable_services() {

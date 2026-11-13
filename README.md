@@ -49,15 +49,22 @@ A ideia: instalar só a base, e depois adicionar um grupo de cada vez com `./add
 
 | Grupo | O que traz |
 |---|---|
-| `base` | sudo, NetworkManager (com Wi-Fi), git, curl, gnupg, htop, zram |
-| `tuning` | ajustes de HD: `noatime`, `swappiness=10`, zram (zstd, 25%), agendador `bfq`, desativa Bluetooth/CUPS/Avahi/ModemManager se existirem |
+| `base` | sudo, NetworkManager (com Wi-Fi), git, curl, gnupg, htop, zram; comenta o `/etc/network/interfaces` para o NetworkManager assumir a rede (original em `interfaces.so-proprio.bak`) |
+| `tuning` | ajustes de HD: `noatime`, `swappiness=10`, zram (zstd, 25%), agendador `bfq`, `GRUB_TIMEOUT=1` (menu do GRUB espera 1 s), desativa CUPS/Avahi/ModemManager se existirem |
 | `desktop` | LXQt + Openbox, LightDM, QTerminal, PCManFM-Qt, gerenciamento de energia, Conky com `free -h` e `systemd-analyze` no canto superior direito da tela |
-| `navegador` | Firefox ESR |
+| `visual` | tema escuro, painel (dock central com menu, apps e janelas; barra em cima com rede, Bluetooth, bateria, volume e hora), 1 área de trabalho e atalhos: **Ctrl+Alt+T** terminal, **Ctrl+Alt+F** Firefox, **Ctrl+Alt+C** VS Code |
+| `navegador` | Firefox ESR com preferências de baixo consumo (cache em memória, menos processos), uBlock Origin e sem telemetria |
 | `dev` | Python (venv, pipx), build-essential, VS Code (repositório Microsoft), fnm para Node.js |
-| `vm` | VirtualBox (repositório Oracle) |
+| `vm` | VirtualBox (repositório Oracle). Opcional |
 | `claude` | Claude Code no terminal (instalador oficial) |
 
-Ordem sugerida: `base` → `tuning` → `desktop` → `navegador` → `dev` → `claude` → `vm`.
+Ordem sugerida: `base` → `tuning` → `desktop` → `visual` → `navegador` → `dev` → `claude` (e `vm`, se precisar).
+
+Para atualizar um sistema que já está instalado: `git pull`, depois `./add base`, `./add tuning`, `./add visual` e `./add navegador` (rodar de novo é seguro). Depois do `visual`, faça logout e login.
+
+**Painel e atalhos:** o `visual` só regera o painel se faltar a marca `so_proprio=1` em `~/.config/lxqt/panel.conf`, então suas edições ficam. Para voltar ao do repo: `SO_PROPRIO_VISUAL_FORCE=1 ./add visual` (o anterior fica em `panel.conf.so-proprio.bak`). Os atalhos ficam em `~/.config/openbox/rc.xml`.
+
+**Firefox:** confira em `about:policies` se as políticas estão ativas. As preferências são padrões e dá para mudar em `about:config`. O uBlock Origin é baixado na primeira abertura, com rede.
 
 Depois do `dev`: o Node.js LTS já vem instalado; abra um terminal novo para usar `node` e `npm`.
 Depois do `vm`: faça logout/login. Com Secure Boot ativo, os módulos do VirtualBox precisam ser assinados ou o Secure Boot desativado no BIOS.

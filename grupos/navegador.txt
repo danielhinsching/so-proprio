@@ -2,3 +2,4 @@
 # so-proprio: com-recomendados
 # (os recomendados do Firefox incluem os codecs de vídeo, como os do YouTube)
 firefox-esr
+mesa-va-drivers       # decodificação de vídeo pela GPU (Radeon Vega)

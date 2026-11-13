@@ -1,0 +1,6 @@
+# Visual e barra: rede, Bluetooth e volume na bandeja do painel
+nm-tray               # ícone de rede (Qt, leve) para conectar no Wi-Fi sem terminal
+bluez                 # Bluetooth
+blueman               # ícone e gerenciador de Bluetooth
+pipewire-audio        # som (PipeWire + PulseAudio + ALSA); sem isso o volume não existe
+pavucontrol-qt        # mixer de volume (clique no ícone de som)
