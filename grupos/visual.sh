@@ -45,13 +45,24 @@ LXQtPanel QToolButton,
     margin: 0px;
     background: transparent;
 }
+LXQtTaskButton {
+    border: none;
+    padding: 0px;
+    margin: 0px;
+    background: transparent;
+    min-width: 0px;
+    min-height: 0px;
+}
 LXQtPanel QToolButton:hover,
-#TaskBar QToolButton:hover {
+#TaskBar QToolButton:hover,
+LXQtTaskButton:hover {
     background-color: rgba(128, 128, 128, 45);
     border-radius: 6px;
 }
 LXQtPanel QToolButton:pressed,
-#TaskBar QToolButton:checked {
+#TaskBar QToolButton:checked,
+LXQtTaskButton:checked,
+LXQtTaskButton:pressed {
     background-color: rgba(128, 128, 128, 75);
     border-radius: 6px;
 }

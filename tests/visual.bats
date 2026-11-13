@@ -417,6 +417,13 @@ S
   [ -f "$d/lxqt-theme.conf" ]
 }
 
+@test "os cards dos apps abertos (LXQtTaskButton) ficam sem padding" {
+  run_visual
+  d="$HOME/.local/share/lxqt/themes/so-proprio-claro"
+  awk '/^LXQtTaskButton \{/{p=1;next} /^\}/{p=0} p' "$d/lxqt-panel.qss" | grep -q 'padding: 0px'
+  awk '/^LXQtTaskButton \{/{p=1;next} /^\}/{p=0} p' "$d/lxqt-panel.qss" | grep -q 'margin: 0px'
+}
+
 @test "sem o tema base do sistema, usa o tema light/dark original" {
   SO_PROPRIO_LXQT_THEMES_DIR="$TMP/nao-existe" run_visual
   awk '/^\[General\]/{p=1;next} /^\[/{p=0} p' "$HOME/.config/lxqt/lxqt.conf" | grep -qx 'theme=light'
