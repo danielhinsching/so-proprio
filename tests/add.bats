@@ -33,3 +33,88 @@ teardown() { rm -rf "$TMP"; }
   run "$REPO/add" "   "
   [ "$status" -eq 2 ]
 }
+
+# --- Task 2: instalação de grupos ---
+
+fake_cmds() {
+  # $1 = lista de pacotes "instalados" (separados por espaço)
+  BIN="$TMP/bin"; mkdir -p "$BIN"
+  printf '%s\n' $1 > "$TMP/instalados"
+  cat > "$BIN/dpkg-query" <<'Q'
+#!/usr/bin/env bash
+pkg="${@: -1}"
+if grep -qx "$pkg" "$FAKE_INSTALADOS"; then echo "install ok installed"; else exit 1; fi
+Q
+  cat > "$BIN/apt" <<'A'
+#!/usr/bin/env bash
+echo "apt $*" >> "$FAKE_APT_LOG"
+exit "${FAKE_APT_EXIT:-0}"
+A
+  chmod +x "$BIN"/*
+  export FAKE_INSTALADOS="$TMP/instalados" FAKE_APT_LOG="$TMP/apt.log"
+  export DPKG_QUERY_CMD="$BIN/dpkg-query" APT_CMD="$BIN/apt"
+}
+
+@test "read_packages ignora comentários, linhas em branco e espaços" {
+  source "$REPO/lib/add-lib.sh"
+  printf '  git  \n# comentário\n\ncurl # fim\n' > "$TMP/x.txt"
+  run read_packages "$TMP/x.txt"
+  [ "$status" -eq 0 ]
+  [ "$output" = "$(printf 'git\ncurl')" ]
+}
+
+@test "segunda execução não instala nada" {
+  printf 'git\ncurl\n' > "$GRUPOS_DIR/base.txt"
+  fake_cmds "git curl"
+  run "$REPO/add" --yes base
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"nada a instalar"* ]]
+  [ ! -e "$FAKE_APT_LOG" ]
+}
+
+@test "--dry-run não chama o apt e lista os faltantes" {
+  printf 'git\ncurl\n' > "$GRUPOS_DIR/base.txt"
+  fake_cmds "git"
+  run "$REPO/add" --dry-run base
+  [ "$status" -eq 0 ]
+  [[ "$output" == *curl* ]]
+  [ ! -e "$FAKE_APT_LOG" ]
+}
+
+@test "instala só os faltantes" {
+  printf 'git\ncurl\n' > "$GRUPOS_DIR/base.txt"
+  fake_cmds "git"
+  run "$REPO/add" --yes base
+  [ "$status" -eq 0 ]
+  grep -q 'install -y curl' "$FAKE_APT_LOG"
+  ! grep -q ' git' "$FAKE_APT_LOG"
+}
+
+@test "pacote inexistente falha nomeando o pacote" {
+  printf 'pacote-que-nao-existe\n' > "$GRUPOS_DIR/base.txt"
+  fake_cmds ""
+  export FAKE_APT_EXIT=100
+  run "$REPO/add" --yes base
+  [ "$status" -ne 0 ]
+  [[ "$output" == *pacote-que-nao-existe* ]]
+  [[ "$output" != *"concluído"* ]]
+}
+
+@test "grupo com .sh executa o script depois dos pacotes" {
+  printf 'git\n' > "$GRUPOS_DIR/dev.txt"
+  printf '#!/usr/bin/env bash\necho script >> "$FAKE_APT_LOG"\n' > "$GRUPOS_DIR/dev.sh"
+  fake_cmds ""
+  run "$REPO/add" --yes dev
+  [ "$status" -eq 0 ]
+  [ "$(head -1 "$FAKE_APT_LOG")" = "apt install -y git" ]
+  [ "$(tail -1 "$FAKE_APT_LOG")" = "script" ]
+  grep -q 'dev' "$XDG_STATE_HOME/so-proprio/add.log"
+}
+
+@test "sem --yes e sem confirmação não instala" {
+  printf 'curl\n' > "$GRUPOS_DIR/base.txt"
+  fake_cmds ""
+  run bash -c "echo n | '$REPO/add' base"
+  [ "$status" -ne 0 ]
+  [ ! -e "$FAKE_APT_LOG" ]
+}

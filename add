@@ -41,3 +41,5 @@ if ! is_group "$GRUPOS_DIR" "$GROUP"; then
   show_groups >&2
   exit 2
 fi
+
+run_group "$GROUP"
