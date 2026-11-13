@@ -14,7 +14,10 @@ fi
 . /etc/os-release
 echo "VirtualBox: adicionando o repositório da Oracle para '${VERSION_CODENAME}'."
 sudo install -d -m 0755 /etc/apt/keyrings
-curl -fsSL https://www.virtualbox.org/download/oracle_vbox_2016.asc | gpg --dearmor | sudo tee "$KEYRING" >/dev/null
+tmp="$(mktemp)"
+curl -fsSL -o "$tmp" https://www.virtualbox.org/download/oracle_vbox_2016.asc
+gpg --dearmor < "$tmp" | sudo tee "$KEYRING" >/dev/null
+rm -f "$tmp"
 echo "deb [arch=amd64 signed-by=$KEYRING] https://download.virtualbox.org/virtualbox/debian ${VERSION_CODENAME} contrib" | sudo tee "$LIST" >/dev/null
 sudo apt-get update
 

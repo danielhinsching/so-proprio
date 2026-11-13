@@ -6,6 +6,7 @@ setup() {
   export XDG_STATE_HOME="$TMP/state"
   export GRUPOS_DIR="$TMP/grupos"
   mkdir -p "$GRUPOS_DIR"
+  export SO_PROPRIO_ALLOW_ROOT=1
 }
 
 teardown() { rm -rf "$TMP"; }
@@ -106,7 +107,7 @@ A
   fake_cmds ""
   run "$REPO/add" --yes dev
   [ "$status" -eq 0 ]
-  [ "$(head -1 "$FAKE_APT_LOG")" = "apt install -y git" ]
+  [ "$(sed -n 2p "$FAKE_APT_LOG")" = "apt install -y git" ]
   [ "$(tail -1 "$FAKE_APT_LOG")" = "script" ]
   grep -q 'dev' "$XDG_STATE_HOME/so-proprio/add.log"
 }
@@ -159,4 +160,43 @@ A
   [[ "$output" == *"Ajustes de HD"* ]]
   [[ "$output" == *"dry-run"* ]]
   [ ! -e "$TMP/root/etc/fstab.so-proprio.bak" ]
+}
+
+# --- Correções da revisão final ---
+
+@test "atualiza a lista de pacotes antes de instalar" {
+  printf 'curl\n' > "$GRUPOS_DIR/base.txt"
+  fake_cmds ""
+  run "$REPO/add" --yes base
+  [ "$status" -eq 0 ]
+  [ "$(head -1 "$FAKE_APT_LOG")" = "apt update" ]
+  [ "$(sed -n 2p "$FAKE_APT_LOG")" = "apt install -y curl" ]
+}
+
+@test "recusa rodar como root, exceto tuning" {
+  printf 'curl\n' > "$GRUPOS_DIR/base.txt"
+  fake_cmds ""
+  unset SO_PROPRIO_ALLOW_ROOT
+  run env SO_PROPRIO_UID=0 "$REPO/add" --yes base
+  [ "$status" -eq 1 ]
+  [[ "$output" == *root* ]]
+  [ ! -e "$FAKE_APT_LOG" ]
+  mkdir -p "$TMP/root/etc"; printf 'UUID=a / ext4 defaults 0 1\n' > "$TMP/root/etc/fstab"
+  run env SO_PROPRIO_UID=0 ROOT_PREFIX="$TMP/root" "$REPO/add" --dry-run tuning
+  [ "$status" -eq 0 ]
+}
+
+@test "claude.sh falha se o download falhar" {
+  mkdir -p "$TMP/bin" "$TMP/home"
+  printf '#!/bin/sh\necho "curl: (22) 403" >&2\nexit 22\n' > "$TMP/bin/curl"
+  chmod +x "$TMP/bin/curl"
+  run env -i HOME="$TMP/home" PATH="$TMP/bin:/usr/bin:/bin" SO_PROPRIO_UID=1000 bash "$REPO/grupos/claude.sh"
+  [ "$status" -ne 0 ]
+  [[ "$output" != *"Abra um novo terminal"* ]]
+}
+
+@test "dev.sh usa o keyring e o formato que o pacote code espera" {
+  grep -q '/usr/share/keyrings/microsoft.gpg' "$REPO/grupos/dev.sh"
+  grep -q 'vscode.sources' "$REPO/grupos/dev.sh"
+  ! grep -q '/etc/apt/keyrings/packages.microsoft.gpg' "$REPO/grupos/dev.sh"
 }

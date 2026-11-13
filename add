@@ -44,6 +44,11 @@ if [ "$GROUP" = "tuning" ]; then
   exec "$REPO_DIR/tuning/apply.sh" "${args[@]}"
 fi
 
+if [ "${SO_PROPRIO_UID:-$(id -u)}" -eq 0 ] && [ "${SO_PROPRIO_ALLOW_ROOT:-0}" -ne 1 ]; then
+  echo "Não rode ./add como root (nem com sudo): rode como seu usuário; o script pede sudo quando precisa." >&2
+  exit 1
+fi
+
 if ! is_group "$GRUPOS_DIR" "$GROUP"; then
   echo "Grupo desconhecido: '$GROUP'" >&2
   show_groups >&2

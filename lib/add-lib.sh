@@ -85,6 +85,11 @@ run_group() {
   fi
 
   if [ "${#missing[@]}" -gt 0 ]; then
+    if ! "${apt_cmd[@]}" update; then
+      echo "ERRO: falha ao atualizar a lista de pacotes (apt update). Confira a rede." >&2
+      log_event "$name falhou (apt update)"
+      return 1
+    fi
     if ! "${apt_cmd[@]}" install -y "${missing[@]}"; then
       echo "ERRO: falha ao instalar: ${missing[*]}" >&2
       log_event "$name falhou (pacotes: ${missing[*]})"

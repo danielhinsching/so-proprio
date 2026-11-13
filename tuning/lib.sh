@@ -2,14 +2,18 @@
 # Ajustes de desempenho para HD mecânico. Carregado com `source`.
 # Todas as funções recebem caminhos explícitos para poderem ser testadas fora do sistema real.
 
-# set_noatime <fstab>: adiciona noatime em / e /home (ext4). Faz backup uma única vez.
+# set_noatime <fstab>: adiciona noatime em / e /home (ext4).
+# Guarda o fstab original uma única vez, escreve num temporário no mesmo diretório,
+# verifica com findmnt e só então troca (mv é atômico).
 set_noatime() {
-  local fstab="$1" tmp
+  local fstab="$1" tmp changed
+  local findmnt_cmd="${FINDMNT_CMD:-findmnt}"
   [ -f "$fstab" ] || { echo "fstab não encontrado: $fstab" >&2; return 1; }
   [ -e "$fstab.so-proprio.bak" ] || cp -p "$fstab" "$fstab.so-proprio.bak"
-  tmp="$(mktemp)"
-  awk '
+  tmp="$(mktemp "$fstab.XXXXXX")" || return 1
+  changed="$(awk -v out="$tmp" '
     $1 !~ /^#/ && NF >= 4 && ($2 == "/" || $2 == "/home") && $3 == "ext4" {
+      matched++
       n = split($4, o, ",")
       has = 0
       for (i = 1; i <= n; i++) if (o[i] == "noatime") has = 1
@@ -17,14 +21,27 @@ set_noatime() {
         $4 = $4 ",noatime"
         line = $1
         for (i = 2; i <= NF; i++) line = line "\t" $i
-        print line
+        print line > out
         next
       }
     }
-    { print }
-  ' "$fstab" > "$tmp"
-  cat "$tmp" > "$fstab"
-  rm -f "$tmp"
+    { print > out }
+    END { print matched + 0 }
+  ' "$fstab")" || { rm -f "$tmp"; return 1; }
+  if [ "$changed" -eq 0 ]; then
+    echo "Aviso: nenhuma linha ext4 para / ou /home em $fstab; noatime não aplicado."
+  fi
+  # Só bloqueia se a mudança piorou: original válido e novo inválido.
+  # (Um fstab que já falha, por exemplo com um disco externo ausente, não deve travar o ajuste.)
+  if "$findmnt_cmd" --verify --tab-file "$fstab" >/dev/null 2>&1 \
+     && ! "$findmnt_cmd" --verify --tab-file "$tmp" >/dev/null 2>&1; then
+    echo "ERRO: o novo fstab não passou na verificação (findmnt --verify); nada foi alterado." >&2
+    rm -f "$tmp"
+    return 1
+  fi
+  chmod --reference="$fstab" "$tmp"
+  chown --reference="$fstab" "$tmp" 2>/dev/null || true
+  mv -f "$tmp" "$fstab"
 }
 
 # write_sysctl <root>
@@ -64,13 +81,16 @@ ACTION=="add|change", KERNEL=="sd[a-z]*", ATTR{queue/rotational}=="1", ATTR{queu
 RULE
 }
 
-# disable_services <nome>...: desativa apenas os serviços que existem.
+# disable_services <nome>...: desativa as unidades .service, .socket e .path que existem
+# (socket/path reativariam o serviço sob demanda, por exemplo o CUPS ao imprimir).
 disable_services() {
-  local cmd="${SYSTEMCTL:-systemctl}" svc
+  local cmd="${SYSTEMCTL:-systemctl}" svc unit
   for svc in "$@"; do
-    if "$cmd" list-unit-files "$svc.service" --no-legend 2>/dev/null | grep -q "^$svc\.service"; then
-      echo "Desativando $svc.service"
-      "$cmd" disable --now "$svc.service"
-    fi
+    for unit in "$svc.socket" "$svc.path" "$svc.service"; do
+      if "$cmd" list-unit-files "$unit" --no-legend 2>/dev/null | grep -q "^${unit//./\\.}[[:space:]]"; then
+        echo "Desativando $unit"
+        "$cmd" disable --now "$unit"
+      fi
+    done
   done
 }

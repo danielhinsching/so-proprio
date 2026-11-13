@@ -102,3 +102,52 @@ EOF
   [ -e "$ROOT/etc/sysctl.d/99-so-proprio.conf" ]
   [ "$(opts_of /home)" = "defaults,noatime" ]
 }
+
+# --- Correções da revisão final ---
+
+@test "disable_services também desativa .socket e .path" {
+  cat > "$TMP/systemctl" <<'EOF2'
+#!/usr/bin/env bash
+if [ "$1" = "list-unit-files" ]; then printf '%s enabled\n' cups.service cups.socket cups.path avahi-daemon.socket; exit 0; fi
+echo "systemctl $*" >> "$SYSTEMCTL_LOG"
+EOF2
+  chmod +x "$TMP/systemctl"
+  export SYSTEMCTL="$TMP/systemctl" SYSTEMCTL_LOG="$TMP/sc.log"
+  run disable_services cups avahi-daemon
+  [ "$status" -eq 0 ]
+  grep -q 'disable --now cups.socket' "$TMP/sc.log"
+  grep -q 'disable --now cups.path' "$TMP/sc.log"
+  grep -q 'disable --now cups.service' "$TMP/sc.log"
+  grep -q 'disable --now avahi-daemon.socket' "$TMP/sc.log"
+}
+
+@test "apply com ROOT_PREFIX não mexe nos serviços do sistema real" {
+  printf '#!/usr/bin/env bash\necho "systemctl $*" >> "%s"\n' "$TMP/sc.log" > "$TMP/systemctl"
+  chmod +x "$TMP/systemctl"
+  run env ROOT_PREFIX="$ROOT" SYSTEMCTL="$TMP/systemctl" "$REPO/tuning/apply.sh" --yes
+  [ "$status" -eq 0 ]
+  [ ! -e "$TMP/sc.log" ]
+}
+
+@test "fstab que não passa na verificação não é instalado" {
+  cp "$ROOT/etc/fstab" "$TMP/original"
+  # findmnt falso: aprova o fstab original e reprova qualquer outro arquivo
+  printf '#!/bin/sh\n[ "$3" = "%s" ] && exit 0\nexit 1\n' "$ROOT/etc/fstab" > "$TMP/findmnt"; chmod +x "$TMP/findmnt"
+  FINDMNT_CMD="$TMP/findmnt" run set_noatime "$ROOT/etc/fstab"
+  [ "$status" -ne 0 ]
+  cmp "$ROOT/etc/fstab" "$TMP/original"
+  [ -z "$(find "$ROOT/etc" -name 'fstab.*' ! -name 'fstab.so-proprio.bak')" ]
+}
+
+@test "set_noatime preserva permissões do fstab" {
+  chmod 640 "$ROOT/etc/fstab"
+  set_noatime "$ROOT/etc/fstab"
+  [ "$(stat -c %a "$ROOT/etc/fstab")" = "640" ]
+}
+
+@test "avisa quando / e /home não são ext4" {
+  sed -i 's/ ext4 / btrfs /' "$ROOT/etc/fstab"
+  run set_noatime "$ROOT/etc/fstab"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"nenhuma linha"* ]]
+}

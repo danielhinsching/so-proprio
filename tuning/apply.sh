@@ -42,14 +42,18 @@ fi
 
 # No sistema real, precisa de root: reexecuta com sudo.
 if [ -z "$ROOT" ] && [ "$(id -u)" -ne 0 ]; then
-  exec sudo "$0" --yes
+  exec sudo bash "$0" --yes
 fi
 
 set_noatime "$ROOT/etc/fstab"
 write_sysctl "$ROOT"
 write_zram "$ROOT"
 write_udev "$ROOT"
-disable_services "${SERVICES[@]}"
+if [ -z "$ROOT" ]; then
+  disable_services "${SERVICES[@]}"
+else
+  echo "(ROOT_PREFIX definido: serviços do sistema real não foram alterados)"
+fi
 
 if [ -z "$ROOT" ]; then
   sysctl --system >/dev/null
