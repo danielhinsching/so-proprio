@@ -98,7 +98,9 @@ ini_set "$HOME/.config/gtk-3.0/settings.ini" Settings gtk-application-prefer-dar
 
 WALL="$HOME/.local/share/so-proprio/wallpaper.png"
 mkdir -p "$(dirname "$WALL")"
-cp "$REPO_DIR/dotfiles/wallpaper/$MODE.png" "$WALL"
+# Fundo preto por padrão; SO_PROPRIO_FUNDO=tema usa o degradê do tema claro/escuro.
+FUNDO=preto; [ "${SO_PROPRIO_FUNDO:-preto}" = tema ] && FUNDO="$MODE"
+cp "$REPO_DIR/dotfiles/wallpaper/$FUNDO.png" "$WALL"
 ini_set "$HOME/.config/pcmanfm-qt/lxqt/settings.conf" Desktop Wallpaper "$WALL"
 ini_set "$HOME/.config/pcmanfm-qt/lxqt/settings.conf" Desktop WallpaperMode zoom
 echo "Aparência: tema $MODE, ícones $ICONS, fonte Inter, papel de parede novo."
@@ -244,7 +246,7 @@ echo "Touchpad: rolagem invertida e toque para clicar (vale no próximo login)."
 GREETER_TMP="$(mktemp)"
 cat > "$GREETER_TMP" <<'GREETER'
 [greeter]
-background=/usr/share/backgrounds/so-proprio-escuro.png
+background=/usr/share/backgrounds/so-proprio-fundo.png
 user-background=false
 hide-user-image=true
 theme-name=Adwaita
@@ -252,7 +254,7 @@ font-name=Inter 11
 indicators=~host;~spacer;~clock;~spacer;~session;~power
 GREETER
 "${SUDO[@]}" install -D -m 0644 "$GREETER_TMP" "$ROOT/etc/lightdm/lightdm-gtk-greeter.conf"
-"${SUDO[@]}" install -D -m 0644 "$REPO_DIR/dotfiles/wallpaper/escuro.png" "$ROOT/usr/share/backgrounds/so-proprio-escuro.png"
+"${SUDO[@]}" install -D -m 0644 "$REPO_DIR/dotfiles/wallpaper/$FUNDO.png" "$ROOT/usr/share/backgrounds/so-proprio-fundo.png"
 cat > "$GREETER_TMP" <<'GTKSET'
 [Settings]
 gtk-application-prefer-dark-theme=true

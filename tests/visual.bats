@@ -134,7 +134,7 @@ panel_conf() { echo "$HOME/.config/lxqt/panel.conf"; }
 }
 
 @test "SO_PROPRIO_TEMA=escuro usa a paleta escura em tudo" {
-  SO_PROPRIO_TEMA=escuro run_visual
+  SO_PROPRIO_TEMA=escuro SO_PROPRIO_FUNDO=tema run_visual
   grep -q '^window.active.title.bg.color: #1c1c1e' "$HOME/.themes/SoProprio/openbox-3/themerc"
   awk '/^\[General\]/{p=1;next} /^\[/{p=0} p' "$HOME/.config/lxqt/lxqt.conf" | grep -qx 'theme=so-proprio-escuro'
   grep -qx 'icon_theme=Papirus-Dark' "$HOME/.config/lxqt/lxqt.conf"
@@ -176,8 +176,19 @@ panel_conf() { echo "$HOME/.config/lxqt/panel.conf"; }
   grep -qx 'WallpaperMode=zoom' "$s"
 }
 
+@test "o fundo da área de trabalho e do login é preto por padrão" {
+  run_visual
+  cmp "$HOME/.local/share/so-proprio/wallpaper.png" "$REPO/dotfiles/wallpaper/preto.png"
+  cmp "$ROOT_PREFIX/usr/share/backgrounds/so-proprio-fundo.png" "$REPO/dotfiles/wallpaper/preto.png"
+}
+
+@test "SO_PROPRIO_FUNDO=tema volta ao degradê do tema" {
+  SO_PROPRIO_FUNDO=tema run_visual
+  cmp "$HOME/.local/share/so-proprio/wallpaper.png" "$REPO/dotfiles/wallpaper/claro.png"
+}
+
 @test "os papéis de parede do repo são PNG" {
-  for f in claro escuro; do
+  for f in claro escuro preto; do
     [ "$(head -c 8 "$REPO/dotfiles/wallpaper/$f.png" | od -An -tx1 | tr -d ' \n')" = "89504e470d0a1a0a" ]
   done
 }
@@ -384,8 +395,8 @@ S
   c="$ROOT_PREFIX/etc/lightdm/lightdm-gtk-greeter.conf"
   grep -qx 'hide-user-image=true' "$c"
   grep -qx 'user-background=false' "$c"
-  grep -qx 'background=/usr/share/backgrounds/so-proprio-escuro.png' "$c"
-  [ -f "$ROOT_PREFIX/usr/share/backgrounds/so-proprio-escuro.png" ]
+  grep -qx 'background=/usr/share/backgrounds/so-proprio-fundo.png' "$c"
+  [ -f "$ROOT_PREFIX/usr/share/backgrounds/so-proprio-fundo.png" ]
   g="$ROOT_PREFIX/var/lib/lightdm/.config/gtk-3.0"
   grep -qx 'gtk-application-prefer-dark-theme=true' "$g/settings.ini"
   grep -q '#login_window button' "$g/gtk.css"

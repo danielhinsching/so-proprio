@@ -62,6 +62,8 @@ Ordem sugerida: `base` → `tuning` → `desktop` → `visual` → `navegador` �
 
 Para atualizar um sistema que já está instalado: `git pull`, depois `./add base`, `./add tuning`, `./add visual` e `./add navegador` (rodar de novo é seguro). Depois do `visual`, faça logout e login.
 
+**Fundo:** a área de trabalho e a tela de login ficam pretas; `SO_PROPRIO_FUNDO=tema ./add visual` volta ao degradê do tema.
+
 **Janelas e dock:** botões de fechar/minimizar/maximizar estilo Mac (bolinhas vermelha, amarela e verde, à direita; sem o nome da janela na barra de título); só a dock de baixo é flutuante, arredondada e só com ícones (a barra de cima é reta); o botão do menu usa o asterisco do nofio (precisa do `picom`, instalado pelo `visual`); o `visual` também coloca o usuário no grupo `video` para as teclas de brilho funcionarem (vale após logout e login).
 
 **Tela de login:** o `visual` deixa o LightDM escuro, sem foto de perfil e sem os botões Entrar/Cancelar (digite a senha e Enter); vale no próximo logout/reinício.
