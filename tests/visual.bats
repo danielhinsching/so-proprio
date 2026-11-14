@@ -379,6 +379,25 @@ S
   grep -q 'MatchIsTouchpad "on"' "$f"
 }
 
+@test "tela de login: escura, sem foto de perfil e sem botões Entrar/Cancelar" {
+  run_visual
+  c="$ROOT_PREFIX/etc/lightdm/lightdm-gtk-greeter.conf"
+  grep -qx 'hide-user-image=true' "$c"
+  grep -qx 'user-background=false' "$c"
+  grep -qx 'background=/usr/share/backgrounds/so-proprio-escuro.png' "$c"
+  [ -f "$ROOT_PREFIX/usr/share/backgrounds/so-proprio-escuro.png" ]
+  g="$ROOT_PREFIX/var/lib/lightdm/.config/gtk-3.0"
+  grep -qx 'gtk-application-prefer-dark-theme=true' "$g/settings.ini"
+  grep -q '#login_window button' "$g/gtk.css"
+  grep -q '#user_image' "$g/gtk.css"
+}
+
+@test "rodar o visual de novo não duplica a configuração da tela de login" {
+  run_visual
+  run_visual
+  [ "$(grep -c '^hide-user-image=' "$ROOT_PREFIX/etc/lightdm/lightdm-gtk-greeter.conf")" -eq 1 ]
+}
+
 @test "o VS Code e o Firefox são pré-carregados em segundo plano depois do login" {
   run_visual
   a="$HOME/.config/autostart/so-proprio-precarga.desktop"

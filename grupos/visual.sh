@@ -210,6 +210,69 @@ XORG
 rm -f "$TP_TMP"
 echo "Touchpad: rolagem invertida e toque para clicar (vale no próximo login)."
 
+# --- Tela de login (LightDM): escura, só usuário e senha (Enter entra) ---
+GREETER_TMP="$(mktemp)"
+cat > "$GREETER_TMP" <<'GREETER'
+[greeter]
+background=/usr/share/backgrounds/so-proprio-escuro.png
+user-background=false
+hide-user-image=true
+theme-name=Adwaita
+font-name=Inter 11
+indicators=~host;~spacer;~clock;~spacer;~session;~power
+GREETER
+"${SUDO[@]}" install -D -m 0644 "$GREETER_TMP" "$ROOT/etc/lightdm/lightdm-gtk-greeter.conf"
+"${SUDO[@]}" install -D -m 0644 "$REPO_DIR/dotfiles/wallpaper/escuro.png" "$ROOT/usr/share/backgrounds/so-proprio-escuro.png"
+cat > "$GREETER_TMP" <<'GTKSET'
+[Settings]
+gtk-application-prefer-dark-theme=true
+gtk-font-name=Inter 11
+GTKSET
+"${SUDO[@]}" install -D -m 0644 "$GREETER_TMP" "$ROOT/var/lib/lightdm/.config/gtk-3.0/settings.ini"
+cat > "$GREETER_TMP" <<'GTKCSS'
+/* so-proprio: login limpo e escuro; sem foto de perfil e sem Entrar/Cancelar (Enter entra) */
+#user_image,
+#user_image_box {
+    opacity: 0;
+    min-width: 0px;
+    min-height: 0px;
+    margin: 0px;
+    padding: 0px;
+}
+#login_window button,
+#login_box button,
+#buttonbox_frame button {
+    opacity: 0;
+    min-width: 0px;
+    min-height: 0px;
+    margin: 0px;
+    padding: 0px;
+    border: none;
+    font-size: 0px;
+}
+#login_window,
+#login_box {
+    background-color: rgba(28, 28, 30, 0.88);
+    color: #f5f5f7;
+    border-radius: 14px;
+    border: none;
+}
+#login_window entry,
+#login_box entry {
+    background-color: #2c2c2e;
+    color: #f5f5f7;
+    border: 1px solid #3a3a3c;
+    border-radius: 8px;
+}
+#panel_window {
+    background-color: rgba(28, 28, 30, 0.6);
+    color: #f5f5f7;
+}
+GTKCSS
+"${SUDO[@]}" install -D -m 0644 "$GREETER_TMP" "$ROOT/var/lib/lightdm/.config/gtk-3.0/gtk.css"
+rm -f "$GREETER_TMP"
+echo "Login: tela escura, sem foto de perfil e sem botões (digite a senha e Enter). Vale no próximo logout/reinício."
+
 # --- Painel ---
 if [ -f "$PANEL" ] && grep -qx 'so_proprio=3' "$PANEL" && [ "${SO_PROPRIO_VISUAL_FORCE:-0}" != "1" ]; then
   echo "Painel: já configurado pelo so-proprio, mantido (SO_PROPRIO_VISUAL_FORCE=1 para regerar)."
