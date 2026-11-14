@@ -69,12 +69,19 @@ LXQtTaskButton:pressed {
 QSS
   cat >> "$CUSTOM_DIR/lxqt-panel.qss" <<QSS
 
-/* so-proprio: dock flutuante e arredondada (precisa do picom para os cantos transparentes) */
-LXQtPanel #BackgroundWidget {
+/* so-proprio: só a dock de baixo é flutuante e arredondada (precisa do picom para os cantos transparentes);
+   a barra de cima fica reta e colada na borda */
+LXQtPanel[position="Bottom"] #BackgroundWidget {
     background-color: $BG;
     border: 1px solid $BORDER;
     border-radius: 16px;
     margin: 4px 4px 8px 4px;
+}
+LXQtPanel[position="Top"] #BackgroundWidget {
+    background-color: $BG;
+    border: none;
+    border-radius: 0px;
+    margin: 0px;
 }
 QSS
   LXQT_THEME="$CUSTOM_THEME"
@@ -118,8 +125,9 @@ window.inactive.title.bg: flat solid
 window.inactive.title.bg.color: $BG_INACTIVE
 window.active.label.bg: parentrelative
 window.inactive.label.bg: parentrelative
-window.active.label.text.color: $TEXT
-window.inactive.label.text.color: $SUBTLE
+# o nome da janela não aparece: texto na mesma cor da barra de título
+window.active.label.text.color: $BG
+window.inactive.label.text.color: $BG_INACTIVE
 window.active.handle.bg: flat solid
 window.active.handle.bg.color: $BG
 window.inactive.handle.bg: flat solid
@@ -169,7 +177,7 @@ THEME
       printf 'window.%s.button.%s.bg.color: %s\n' "$win" "$st" "$c"
       printf 'window.%s.button.%s.image.color: %s\n' "$win" "$st" "$ic"
     done
-    # Botões estilo Mac: bolinhas vermelha, amarela e verde; fundo igual ao da barra (sem quadrado no hover)
+    # Botões estilo Mac (à direita): bolinhas vermelha, amarela e verde; fundo igual ao da barra (sem quadrado no hover)
     for btn in close iconify max; do
       case "$btn" in
         close) mac='#ff5f57' ;; iconify) mac='#febc2e' ;; max) mac='#28c840' ;;
@@ -190,7 +198,7 @@ done
 # --- Ícone do botão do menu (grade de apps) ---
 ICON_DIR="$HOME/.local/share/icons/hicolor/64x64/apps"
 mkdir -p "$ICON_DIR"
-cp "$REPO_DIR/dotfiles/icons/so-proprio-menu.png" "$ICON_DIR/so-proprio-menu.png"
+cp "$REPO_DIR/dotfiles/icons/so-proprio-menu-$MODE.png" "$ICON_DIR/so-proprio-menu.png"
 
 # --- Bateria: cbatticon usa os ícones do tema; o do LXQt é um gráfico de pizza ---
 ini_set "$LXQT_DIR/lxqt-powermanagement.conf" General showIcon false
@@ -430,7 +438,7 @@ if [ ! -f "$RC" ]; then
 fi
 if [ -f "$RC" ]; then
   sed -i '/<desktops>/,/<\/desktops>/ s|<number>[0-9]*</number>|<number>1</number>|' "$RC"
-  sed -i -E '/<theme>/,/<\/theme>/ { s#<name>(Clearlooks|Onyx|SoProprio)</name>#<name>SoProprio</name>#; s#<titleLayout>[A-Z]*</titleLayout>#<titleLayout>CIML</titleLayout># }' "$RC"
+  sed -i -E '/<theme>/,/<\/theme>/ { s#<name>(Clearlooks|Onyx|SoProprio)</name>#<name>SoProprio</name>#; s#<titleLayout>[A-Z]*</titleLayout>#<titleLayout>LIMC</titleLayout># }' "$RC"
   add_key() { # <tecla> <comando>
     grep -q "key=\"$1\"" "$RC" && return 0
     sed -i "s|</keyboard>|  <keybind key=\"$1\"><action name=\"Execute\"><command>$2</command></action></keybind>\n</keyboard>|" "$RC"

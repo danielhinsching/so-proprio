@@ -118,7 +118,7 @@ panel_conf() { echo "$HOME/.config/lxqt/panel.conf"; }
   run_visual
   rc="$HOME/.config/openbox/rc.xml"
   grep -q '<name>SoProprio</name>' "$rc"
-  grep -q '<titleLayout>CIML</titleLayout>' "$rc"
+  grep -q '<titleLayout>LIMC</titleLayout>' "$rc"
   t="$HOME/.themes/SoProprio/openbox-3"
   [ -f "$t/themerc" ]
   for b in close iconify max max_toggled; do [ -f "$t/$b.xbm" ] || { echo "falta $b.xbm"; return 1; }; done
@@ -412,8 +412,7 @@ S
   c="$(panel_conf)"
   awk '/^\[taskbar\]/{p=1;next} /^\[/{p=0} p' "$c" | grep -qx 'buttonWidth=40'
   q="$HOME/.local/share/lxqt/themes/so-proprio-claro/lxqt-panel.qss"
-  awk '/^LXQtPanel #BackgroundWidget \{/{p=1;next} /^\}/{p=0} p' "$q" | grep -q 'border-radius: 16px'
-  awk '/^LXQtPanel #BackgroundWidget \{/{p=1;next} /^\}/{p=0} p' "$q" | grep -q 'margin:'
+  awk '/^LXQtPanel\[position="Bottom"\] #BackgroundWidget \{/{p=1;next} /^\}/{p=0} p' "$q" | grep -q 'margin:'
   grep -qx 'backend = "xrender";' "$HOME/.config/picom/picom.conf"
   grep -q '^Exec=.*picom' "$HOME/.config/autostart/so-proprio-picom.desktop"
 }
@@ -447,8 +446,39 @@ S
   done
 }
 
-@test "o ícone do menu existe no repo como PNG" {
-  [ "$(head -c 8 "$REPO/dotfiles/icons/so-proprio-menu.png" | od -An -tx1 | tr -d ' \n')" = "89504e470d0a1a0a" ]
+@test "o ícone do menu (asterisco nofio) existe no repo como PNG, claro e escuro" {
+  for m in claro escuro; do
+    [ "$(head -c 8 "$REPO/dotfiles/icons/so-proprio-menu-$m.png" | od -An -tx1 | tr -d ' \n')" = "89504e470d0a1a0a" ]
+  done
+}
+
+@test "o tema escuro usa o asterisco branco e o claro, o grafite" {
+  SO_PROPRIO_TEMA=escuro run_visual
+  i="$HOME/.local/share/icons/hicolor/64x64/apps/so-proprio-menu.png"
+  cmp "$i" "$REPO/dotfiles/icons/so-proprio-menu-escuro.png"
+  run_visual
+  cmp "$i" "$REPO/dotfiles/icons/so-proprio-menu-claro.png"
+}
+
+@test "o nome da janela some da barra de título (texto na cor do fundo)" {
+  run_visual
+  t="$HOME/.themes/SoProprio/openbox-3/themerc"
+  grep -qx 'window.active.label.text.color: #f5f5f7' "$t"
+  grep -qx 'window.inactive.label.text.color: #ececec' "$t"
+}
+
+@test "só a dock de baixo é flutuante; a barra de cima fica reta e colada" {
+  run_visual
+  q="$HOME/.local/share/lxqt/themes/so-proprio-claro/lxqt-panel.qss"
+  awk '/^LXQtPanel\[position="Bottom"\] #BackgroundWidget \{/{p=1;next} /^\}/{p=0} p' "$q" | grep -q 'border-radius: 16px'
+  ! grep -q '^LXQtPanel #BackgroundWidget' "$q"
+  awk '/^LXQtPanel\[position="Top"\] #BackgroundWidget \{/{p=1;next} /^\}/{p=0} p' "$q" | grep -q 'border-radius: 0px'
+}
+
+@test "as bolinhas dos botões são 14x14 e redondas" {
+  for b in close iconify max max_toggled; do
+    grep -q '#define .*_width 14' "$REPO/dotfiles/openbox/$b.xbm"
+  done
 }
 
 # --- terceira rodada: ícones sem moldura ---
