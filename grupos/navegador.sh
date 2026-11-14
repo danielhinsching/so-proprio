@@ -23,6 +23,8 @@ POLICIES='{
     "DisableFirefoxStudies": true,
     "DisablePocket": true,
     "DontCheckDefaultBrowser": true,
+    "DisableProfileImport": true,
+    "DisplayBookmarksToolbar": "never",
     "OverrideFirstRunPage": "",
     "OverridePostUpdatePage": "",
     "FirefoxHome": {

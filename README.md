@@ -62,6 +62,8 @@ Ordem sugerida: `base` → `tuning` → `desktop` → `visual` → `navegador` �
 
 Para atualizar um sistema que já está instalado: `git pull`, depois `./add base`, `./add tuning`, `./add visual` e `./add navegador` (rodar de novo é seguro). Depois do `visual`, faça logout e login.
 
+**Janelas e dock:** botões de fechar/minimizar/maximizar estilo Mac (bolinhas vermelha, amarela e verde, à esquerda); a dock de baixo é flutuante, arredondada e só com ícones (precisa do `picom`, instalado pelo `visual`); o `visual` também coloca o usuário no grupo `video` para as teclas de brilho funcionarem (vale após logout e login).
+
 **Tela de login:** o `visual` deixa o LightDM escuro, sem foto de perfil e sem os botões Entrar/Cancelar (digite a senha e Enter); vale no próximo logout/reinício.
 
 **Teclas e extras do `visual`:** Super+L bloqueia a tela (light-locker, pelo LightDM); Print captura a tela (ScreenGrab, seleção de área); teclas de brilho (`brightnessctl`) e de volume (`wpctl`) funcionam; a bateria usa o `cbatticon` (o ícone do LXQt é um gráfico de pizza); o touchpad usa rolagem invertida e toque para clicar (vale no próximo login); a dock de baixo se esconde e aparece ao encostar o mouse na borda; VS Code e Firefox são lidos para a memória 20 s depois do login, para abrirem rápido no HD.

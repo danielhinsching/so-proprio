@@ -118,7 +118,7 @@ panel_conf() { echo "$HOME/.config/lxqt/panel.conf"; }
   run_visual
   rc="$HOME/.config/openbox/rc.xml"
   grep -q '<name>SoProprio</name>' "$rc"
-  grep -q '<titleLayout>LIMC</titleLayout>' "$rc"
+  grep -q '<titleLayout>CIML</titleLayout>' "$rc"
   t="$HOME/.themes/SoProprio/openbox-3"
   [ -f "$t/themerc" ]
   for b in close iconify max max_toggled; do [ -f "$t/$b.xbm" ] || { echo "falta $b.xbm"; return 1; }; done
@@ -339,7 +339,7 @@ S
   mkdir -p "$HOME/.config/lxqt"
   printf '[General]\nso_proprio=1\n[panel1]\nhidable=false\n' > "$(panel_conf)"
   run_visual
-  grep -qx 'so_proprio=3' "$(panel_conf)"
+  grep -qx 'so_proprio=4' "$(panel_conf)"
   awk '/^\[panel1\]/{p=1;next} /^\[/{p=0} p' "$(panel_conf)" | grep -qx 'hidable=true'
 }
 
@@ -398,6 +398,40 @@ S
   [ "$(grep -c '^hide-user-image=' "$ROOT_PREFIX/etc/lightdm/lightdm-gtk-greeter.conf")" -eq 1 ]
 }
 
+@test "botões da janela estilo Mac: vermelho, amarelo e verde à esquerda" {
+  run_visual
+  t="$HOME/.themes/SoProprio/openbox-3/themerc"
+  grep -qx 'window.active.button.close.unpressed.image.color: #ff5f57' "$t"
+  grep -qx 'window.active.button.iconify.unpressed.image.color: #febc2e' "$t"
+  grep -qx 'window.active.button.max.unpressed.image.color: #28c840' "$t"
+  grep -qx 'window.active.button.close.hover.bg: flat solid' "$t"
+}
+
+@test "dock: só ícones nos apps abertos, flutuante e arredondada (QSS + picom)" {
+  run_visual
+  c="$(panel_conf)"
+  awk '/^\[taskbar\]/{p=1;next} /^\[/{p=0} p' "$c" | grep -qx 'buttonWidth=40'
+  q="$HOME/.local/share/lxqt/themes/so-proprio-claro/lxqt-panel.qss"
+  awk '/^LXQtPanel #BackgroundWidget \{/{p=1;next} /^\}/{p=0} p' "$q" | grep -q 'border-radius: 16px'
+  awk '/^LXQtPanel #BackgroundWidget \{/{p=1;next} /^\}/{p=0} p' "$q" | grep -q 'margin:'
+  grep -qx 'backend = "xrender";' "$HOME/.config/picom/picom.conf"
+  grep -q '^Exec=.*picom' "$HOME/.config/autostart/so-proprio-picom.desktop"
+}
+
+@test "o usuário entra no grupo video para as teclas de brilho funcionarem" {
+  printf '#!/usr/bin/env bash\necho "$@" >> "%s/usermod.log"\n' "$TMP" > "$TMP/usermod-stub"
+  chmod +x "$TMP/usermod-stub"
+  SO_PROPRIO_USERMOD="$TMP/usermod-stub" SO_PROPRIO_GRUPOS_USUARIO="daniel sudo" run_visual
+  grep -q -- '-aG video' "$TMP/usermod.log"
+}
+
+@test "quem já está no grupo video não é alterado" {
+  printf '#!/usr/bin/env bash\necho "$@" >> "%s/usermod.log"\n' "$TMP" > "$TMP/usermod-stub"
+  chmod +x "$TMP/usermod-stub"
+  SO_PROPRIO_USERMOD="$TMP/usermod-stub" SO_PROPRIO_GRUPOS_USUARIO="daniel video" run_visual
+  [ ! -e "$TMP/usermod.log" ]
+}
+
 @test "o VS Code e o Firefox são pré-carregados em segundo plano depois do login" {
   run_visual
   a="$HOME/.config/autostart/so-proprio-precarga.desktop"
@@ -408,7 +442,7 @@ S
 
 @test "visual.txt traz brilho, bateria, captura de tela e bloqueio" {
   source "$REPO/lib/add-lib.sh"
-  for p in brightnessctl cbatticon screengrab light-locker; do
+  for p in brightnessctl cbatticon screengrab light-locker picom; do
     read_packages "$REPO/grupos/visual.txt" | grep -qx "$p" || { echo "falta $p"; return 1; }
   done
 }
@@ -422,11 +456,11 @@ S
 @test "os painéis são menores, com ícones menores" {
   run_visual
   c="$(panel_conf)"
-  awk '/^\[panel1\]/{p=1;next} /^\[/{p=0} p' "$c" | grep -qx 'panelSize=36'
-  awk '/^\[panel1\]/{p=1;next} /^\[/{p=0} p' "$c" | grep -qx 'iconSize=20'
+  awk '/^\[panel1\]/{p=1;next} /^\[/{p=0} p' "$c" | grep -qx 'panelSize=52'
+  awk '/^\[panel1\]/{p=1;next} /^\[/{p=0} p' "$c" | grep -qx 'iconSize=24'
   awk '/^\[panel2\]/{p=1;next} /^\[/{p=0} p' "$c" | grep -qx 'panelSize=26'
   awk '/^\[panel2\]/{p=1;next} /^\[/{p=0} p' "$c" | grep -qx 'iconSize=16'
-  grep -qx 'so_proprio=3' "$c"
+  grep -qx 'so_proprio=4' "$c"
 }
 
 @test "o tema próprio do LXQt é cópia do base e tira a moldura dos botões do painel" {

@@ -2,7 +2,7 @@
 # Visual do desktop: tema escuro, painel (dock central + barra de status),
 # uma única área de trabalho e atalhos de teclado no Openbox.
 # Não sobrescreve o que você já editou: o painel só é regerado se faltar a marca
-# so_proprio=3 (ou com SO_PROPRIO_VISUAL_FORCE=1); o rc.xml do Openbox só ganha o que falta.
+# so_proprio=4 (ou com SO_PROPRIO_VISUAL_FORCE=1); o rc.xml do Openbox só ganha o que falta.
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -16,11 +16,11 @@ PANEL="$LXQT_DIR/panel.conf"
 # --- Aparência: claro (padrão) ou escuro, com SO_PROPRIO_TEMA=escuro ---
 if [ "${SO_PROPRIO_TEMA:-claro}" = "escuro" ]; then
   MODE=escuro; LXQT_THEME=dark; ICONS=Papirus-Dark; PREFER_DARK=true
-  BG='#1c1c1e'; BG_INACTIVE='#2c2c2e'; TEXT='#f5f5f7'; SUBTLE='#8e8e93'
+  BG='#1c1c1e'; BG_INACTIVE='#2c2c2e'; TEXT='#f5f5f7'; SUBTLE='#8e8e93'; MAC_INATIVO='#48484a'
   BORDER='#3a3a3c'; HOVER='#3a3a3c'; PRESSED='#48484a'; MENU='#2c2c2e'
 else
   MODE=claro; LXQT_THEME=light; ICONS=Papirus; PREFER_DARK=false
-  BG='#f5f5f7'; BG_INACTIVE='#ececec'; TEXT='#1d1d1f'; SUBTLE='#8e8e93'
+  BG='#f5f5f7'; BG_INACTIVE='#ececec'; TEXT='#1d1d1f'; SUBTLE='#8e8e93'; MAC_INATIVO='#c7c7cc'
   BORDER='#d2d2d7'; HOVER='#e5e5ea'; PRESSED='#d1d1d6'; MENU='#ffffff'
 fi
 ACCENT='#0a84ff'
@@ -65,6 +65,16 @@ LXQtTaskButton:checked,
 LXQtTaskButton:pressed {
     background-color: rgba(128, 128, 128, 75);
     border-radius: 6px;
+}
+QSS
+  cat >> "$CUSTOM_DIR/lxqt-panel.qss" <<QSS
+
+/* so-proprio: dock flutuante e arredondada (precisa do picom para os cantos transparentes) */
+LXQtPanel #BackgroundWidget {
+    background-color: $BG;
+    border: 1px solid $BORDER;
+    border-radius: 16px;
+    margin: 4px 4px 8px 4px;
 }
 QSS
   LXQT_THEME="$CUSTOM_THEME"
@@ -158,6 +168,18 @@ THEME
       printf 'window.%s.button.%s.bg: flat solid\n' "$win" "$st"
       printf 'window.%s.button.%s.bg.color: %s\n' "$win" "$st" "$c"
       printf 'window.%s.button.%s.image.color: %s\n' "$win" "$st" "$ic"
+    done
+    # Botões estilo Mac: bolinhas vermelha, amarela e verde; fundo igual ao da barra (sem quadrado no hover)
+    for btn in close iconify max; do
+      case "$btn" in
+        close) mac='#ff5f57' ;; iconify) mac='#febc2e' ;; max) mac='#28c840' ;;
+      esac
+      [ "$win" = inactive ] && mac="$MAC_INATIVO"
+      for st in unpressed pressed hover disabled toggled; do
+        printf 'window.%s.button.%s.%s.bg: flat solid\n' "$win" "$btn" "$st"
+        printf 'window.%s.button.%s.%s.bg.color: %s\n' "$win" "$btn" "$st" "$bgc"
+        printf 'window.%s.button.%s.%s.image.color: %s\n' "$win" "$btn" "$st" "$mac"
+      done
     done
   done
 } > "$OB_THEME/themerc"
@@ -273,8 +295,33 @@ GTKCSS
 rm -f "$GREETER_TMP"
 echo "Login: tela escura, sem foto de perfil e sem botões (digite a senha e Enter). Vale no próximo logout/reinício."
 
+# --- Compositor leve (picom): cantos arredondados e transparentes da dock ---
+mkdir -p "$HOME/.config/picom"
+cat > "$HOME/.config/picom/picom.conf" <<'PICOM'
+# so-proprio: o mínimo para ter transparência; sem sombras, fade nem efeitos.
+backend = "xrender";
+vsync = false;
+shadow = false;
+fading = false;
+corner-radius = 0;
+PICOM
+cat > "$HOME/.config/autostart/so-proprio-picom.desktop" <<DESKTOP
+[Desktop Entry]
+Type=Application
+Name=Compositor (so-proprio)
+Exec=picom --config $HOME/.config/picom/picom.conf
+DESKTOP
+
+# --- Brilho: brightnessctl só escreve no backlight para quem está no grupo video ---
+GRUPOS_USUARIO="${SO_PROPRIO_GRUPOS_USUARIO-$(id -nG "$(id -un)")}"
+if ! printf '%s\n' "$GRUPOS_USUARIO" | tr ' ' '\n' | grep -qx video; then
+  if "${SUDO[@]}" "${SO_PROPRIO_USERMOD:-usermod}" -aG video "$(id -un)"; then
+    echo "Brilho: usuário adicionado ao grupo video (faça logout e login para valer)."
+  fi
+fi
+
 # --- Painel ---
-if [ -f "$PANEL" ] && grep -qx 'so_proprio=3' "$PANEL" && [ "${SO_PROPRIO_VISUAL_FORCE:-0}" != "1" ]; then
+if [ -f "$PANEL" ] && grep -qx 'so_proprio=4' "$PANEL" && [ "${SO_PROPRIO_VISUAL_FORCE:-0}" != "1" ]; then
   echo "Painel: já configurado pelo so-proprio, mantido (SO_PROPRIO_VISUAL_FORCE=1 para regerar)."
 else
   mkdir -p "$LXQT_DIR"
@@ -285,7 +332,7 @@ else
 [General]
 __userfile__=true
 panels=panel1, panel2
-so_proprio=3
+so_proprio=4
 
 [panel1]
 alignment=0
@@ -293,17 +340,17 @@ animation-duration=0
 desktop=0
 hidable=true
 hide-on-overlap=false
-iconSize=20
+iconSize=24
 lineCount=1
 lockPanel=false
 opacity=100
-panelSize=36
+panelSize=52
 plugins=mainmenu, quicklaunch, taskbar
 position=Bottom
 reserve-space=false
 show-delay=0
 visible-margin=true
-width=60
+width=40
 width-percent=true
 
 [panel2]
@@ -343,6 +390,8 @@ type=quicklaunch
 [taskbar]
 alignment=Left
 buttonStyle=Icon
+buttonWidth=40
+buttonHeight=40
 showOnlyCurrentDesktopTasks=false
 type=taskbar
 
@@ -381,7 +430,7 @@ if [ ! -f "$RC" ]; then
 fi
 if [ -f "$RC" ]; then
   sed -i '/<desktops>/,/<\/desktops>/ s|<number>[0-9]*</number>|<number>1</number>|' "$RC"
-  sed -i -E '/<theme>/,/<\/theme>/ { s#<name>(Clearlooks|Onyx|SoProprio)</name>#<name>SoProprio</name>#; s#<titleLayout>[A-Z]*</titleLayout>#<titleLayout>LIMC</titleLayout># }' "$RC"
+  sed -i -E '/<theme>/,/<\/theme>/ { s#<name>(Clearlooks|Onyx|SoProprio)</name>#<name>SoProprio</name>#; s#<titleLayout>[A-Z]*</titleLayout>#<titleLayout>CIML</titleLayout># }' "$RC"
   add_key() { # <tecla> <comando>
     grep -q "key=\"$1\"" "$RC" && return 0
     sed -i "s|</keyboard>|  <keybind key=\"$1\"><action name=\"Execute\"><command>$2</command></action></keybind>\n</keyboard>|" "$RC"
