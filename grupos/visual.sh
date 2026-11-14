@@ -328,13 +328,15 @@ if [ -f "$RC" ]; then
   add_key C-A-c code
   add_key W-l light-locker-command\ -l
   add_key Print screengrab\ -r
+  add_key S-Print screengrab\ -f
+  add_key A-Print screengrab\ -a
   add_key XF86MonBrightnessUp brightnessctl\ set\ +5%
   add_key XF86MonBrightnessDown brightnessctl\ set\ 5%-
   add_key XF86AudioRaiseVolume wpctl\ set-volume\ -l\ 1.0\ @DEFAULT_AUDIO_SINK@\ 5%+
   add_key XF86AudioLowerVolume wpctl\ set-volume\ @DEFAULT_AUDIO_SINK@\ 5%-
   add_key XF86AudioMute wpctl\ set-mute\ @DEFAULT_AUDIO_SINK@\ toggle
   openbox --reconfigure 2>/dev/null || true
-  echo "Openbox: tema SoProprio, 1 área de trabalho; Ctrl+Alt+T terminal, Ctrl+Alt+F Firefox, Ctrl+Alt+C VS Code, Super+L bloqueia, Print captura a tela, teclas de brilho e volume."
+  echo "Openbox: tema SoProprio, 1 área de trabalho; Ctrl+Alt+T terminal, Ctrl+Alt+F Firefox, Ctrl+Alt+C VS Code, Super+L bloqueia, Print captura uma região (Shift+Print tela cheia, Alt+Print janela), teclas de brilho e volume."
 fi
 
 # --- Bluetooth: o tuning antigo o desativava; religa para o ícone funcionar ---

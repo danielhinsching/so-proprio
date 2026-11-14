@@ -365,6 +365,8 @@ S
   grep -q '<command>brightnessctl set +5%</command>' "$rc"
   grep -q '<command>brightnessctl set 5%-</command>' "$rc"
   grep -q '<command>screengrab -r</command>' "$rc"
+  grep -q 'key="S-Print"' "$rc"
+  grep -q 'key="A-Print"' "$rc"
   grep -q '<command>light-locker-command -l</command>' "$rc"
   xmllint --noout "$rc"
 }
