@@ -1,0 +1,261 @@
+#!/usr/bin/env python3
+"""Painel do PC (so-proprio): RAM, CPU, disco, bateria e o `free -h`, em gráficos simples.
+
+Só gasta memória enquanto estiver aberto. Usa o tema salvo em ~/.config/so-proprio/tema.
+  so-proprio-painel            abre a janela
+  so-proprio-painel --resumo   imprime os números em texto (sem tela)
+"""
+import os
+import socket
+import subprocess
+import sys
+import time
+
+GIB = 1024 ** 3
+HISTORICO = 60  # amostras do gráfico de CPU (uma a cada 2 s = 2 minutos)
+
+
+def meminfo():
+    dados = {}
+    with open("/proc/meminfo") as f:
+        for linha in f:
+            nome, _, resto = linha.partition(":")
+            dados[nome] = int(resto.split()[0]) * 1024  # bytes
+    return dados
+
+
+def ram():
+    m = meminfo()
+    total = m["MemTotal"]
+    usado = total - m["MemAvailable"]
+    return usado, total
+
+
+def swap():
+    m = meminfo()
+    total = m.get("SwapTotal", 0)
+    return total - m.get("SwapFree", 0), total
+
+
+def disco(caminho="/"):
+    s = os.statvfs(caminho)
+    total = s.f_blocks * s.f_frsize
+    livre = s.f_bavail * s.f_frsize
+    return total - livre, total
+
+
+def tempos_cpu():
+    with open("/proc/stat") as f:
+        partes = [int(x) for x in f.readline().split()[1:]]
+    ocioso = partes[3] + (partes[4] if len(partes) > 4 else 0)
+    return ocioso, sum(partes)
+
+
+class MedidorCpu:
+    def __init__(self):
+        self.ultimo = tempos_cpu()
+
+    def percentual(self):
+        ocioso, total = tempos_cpu()
+        d_total = total - self.ultimo[1]
+        d_ocioso = ocioso - self.ultimo[0]
+        self.ultimo = (ocioso, total)
+        if d_total <= 0:
+            return 0
+        return max(0, min(100, round(100 * (1 - d_ocioso / d_total))))
+
+
+def bateria():
+    base = "/sys/class/power_supply"
+    try:
+        for nome in sorted(os.listdir(base)):
+            if nome.startswith("BAT"):
+                with open(f"{base}/{nome}/capacity") as f:
+                    pct = int(f.read())
+                with open(f"{base}/{nome}/status") as f:
+                    return pct, f.read().strip()
+    except (OSError, ValueError):
+        pass
+    return None
+
+
+def uptime():
+    with open("/proc/uptime") as f:
+        s = int(float(f.read().split()[0]))
+    d, resto = divmod(s, 86400)
+    h, resto = divmod(resto, 3600)
+    m = resto // 60
+    return (f"{d}d " if d else "") + f"{h}h {m:02d}min"
+
+
+def free_h():
+    try:
+        return subprocess.run(["free", "-h"], capture_output=True, text=True, timeout=5).stdout.rstrip()
+    except (OSError, subprocess.SubprocessError):
+        return "free -h indisponível"
+
+
+def gib(b):
+    return f"{b / GIB:.1f} GiB"
+
+
+def pct(usado, total):
+    return round(100 * usado / total) if total else 0
+
+
+def resumo():
+    cpu = MedidorCpu()
+    time.sleep(0.3)
+    u, t = ram()
+    su, st = swap()
+    du, dt = disco("/")
+    linhas = [
+        f"RAM: {gib(u)} de {gib(t)} ({pct(u, t)}%)",
+        f"Swap: {gib(su)} de {gib(st)} ({pct(su, st)}%)" if st else "Swap: desligada",
+        f"Disco /: {gib(du)} de {gib(dt)} ({pct(du, dt)}%)",
+        f"CPU: {cpu.percentual()}%",
+    ]
+    b = bateria()
+    if b:
+        linhas.append(f"Bateria: {b[0]}% ({b[1]})")
+    linhas.append(f"Ligado há: {uptime()}")
+    linhas.append("")
+    linhas.append(free_h())
+    return "\n".join(linhas)
+
+
+def paleta():
+    try:
+        with open(os.path.expanduser("~/.config/so-proprio/tema")) as f:
+            claro = f.read().strip() == "claro"
+    except OSError:
+        claro = False
+    if claro:
+        return dict(fundo="#f5f5f7", cartao="#ffffff", texto="#1d1d1f", suave="#8e8e93", trilho="#e5e5ea",
+                    ok="#30b350", aviso="#ff9f0a", ruim="#ff453a", destaque="#0a84ff")
+    return dict(fundo="#1c1c1e", cartao="#2c2c2e", texto="#f5f5f7", suave="#8e8e93", trilho="#3a3a3c",
+                ok="#30d158", aviso="#ff9f0a", ruim="#ff453a", destaque="#0a84ff")
+
+
+def abrir_janela(so_testar=False):
+    import tkinter as tk
+
+    c = paleta()
+    raiz = tk.Tk()
+    raiz.title("Painel do PC")
+    raiz.configure(bg=c["fundo"])
+    raiz.resizable(False, False)
+    fonte = ("Inter", 10)
+    fonte_forte = ("Inter", 11, "bold")
+    fonte_mono = ("DejaVu Sans Mono", 8)
+    LARG = 592
+
+    def cor_de(p):
+        return c["ruim"] if p >= 90 else c["aviso"] if p >= 75 else c["ok"]
+
+    cartoes = {}
+
+    def cartao(chave, titulo, altura):
+        quadro = tk.Frame(raiz, bg=c["cartao"], padx=14, pady=10)
+        quadro.pack(fill="x", padx=16, pady=(0, 10))
+        topo = tk.Frame(quadro, bg=c["cartao"])
+        topo.pack(fill="x")
+        tk.Label(topo, text=titulo, bg=c["cartao"], fg=c["texto"], font=fonte_forte).pack(side="left")
+        valor = tk.Label(topo, text="", bg=c["cartao"], fg=c["suave"], font=fonte)
+        valor.pack(side="right")
+        tela = tk.Canvas(quadro, width=LARG - 28, height=altura, bg=c["cartao"], highlightthickness=0)
+        tela.pack(fill="x", pady=(8, 0))
+        cartoes[chave] = (valor, tela)
+
+    cab = tk.Frame(raiz, bg=c["fundo"])
+    cab.pack(fill="x", padx=16, pady=(14, 10))
+    tk.Label(cab, text="Painel do PC", bg=c["fundo"], fg=c["texto"], font=("Inter", 15, "bold")).pack(side="left")
+    info = tk.Label(cab, text="", bg=c["fundo"], fg=c["suave"], font=fonte)
+    info.pack(side="right")
+
+    cartao("cpu", "CPU", 70)
+    cartao("ram", "Memória RAM", 12)
+    cartao("swap", "Swap", 12)
+    cartao("disco", "Disco (/)", 12)
+    cartao("bat", "Bateria", 12)
+
+    caixa = tk.Text(raiz, height=4, width=80, bg=c["cartao"], fg=c["texto"], font=fonte_mono, relief="flat",
+                    padx=14, pady=10, highlightthickness=0, wrap="none")
+    caixa.pack(padx=16, pady=(0, 14))
+
+    historico = []
+    cpu = MedidorCpu()
+
+    def barra(tela, p):
+        tela.delete("all")
+        w = int(tela["width"])
+        tela.create_line(6, 6, w - 6, 6, width=10, capstyle="round", fill=c["trilho"])
+        if p > 0:
+            fim = max(6, 6 + (w - 12) * p / 100)
+            tela.create_line(6, 6, fim, 6, width=10, capstyle="round", fill=cor_de(p))
+
+    def grafico(tela):
+        tela.delete("all")
+        w, h = int(tela["width"]), int(tela["height"])
+        for y in (0, 50, 100):
+            yy = h - 4 - (h - 8) * y / 100
+            tela.create_line(0, yy, w, yy, fill=c["trilho"])
+        if len(historico) > 1:
+            passo = w / (HISTORICO - 1)
+            pts = []
+            for i, v in enumerate(historico):
+                pts += [w - (len(historico) - 1 - i) * passo, h - 4 - (h - 8) * v / 100]
+            tela.create_polygon([pts[0], h] + pts + [pts[-2], h], fill=c["trilho"], outline="")
+            tela.create_line(*pts, fill=c["destaque"], width=2, smooth=True)
+
+    def atualizar():
+        p = cpu.percentual()
+        historico.append(p)
+        del historico[:-HISTORICO]
+        cartoes["cpu"][0].config(text=f"{p}%")
+        grafico(cartoes["cpu"][1])
+        u, t = ram()
+        cartoes["ram"][0].config(text=f"{gib(u)} de {gib(t)}  ·  {pct(u, t)}%")
+        barra(cartoes["ram"][1], pct(u, t))
+        su, st = swap()
+        cartoes["swap"][0].config(text=f"{gib(su)} de {gib(st)}  ·  {pct(su, st)}%" if st else "desligada")
+        barra(cartoes["swap"][1], pct(su, st))
+        du, dt = disco("/")
+        cartoes["disco"][0].config(text=f"{gib(du)} de {gib(dt)}  ·  {pct(du, dt)}%")
+        barra(cartoes["disco"][1], pct(du, dt))
+        b = bateria()
+        cartoes["bat"][0].config(text=f"{b[0]}%  ·  {b[1]}" if b else "sem bateria")
+        barra(cartoes["bat"][1], b[0] if b else 0)
+        info.config(text=f"{socket.gethostname()}  ·  ligado há {uptime()}")
+        caixa.config(state="normal")
+        caixa.delete("1.0", "end")
+        caixa.insert("1.0", free_h())
+        caixa.config(state="disabled")
+
+    def ciclo():
+        atualizar()
+        raiz.after(2000, ciclo)
+
+    raiz.bind("<Escape>", lambda _e: raiz.destroy())
+    if so_testar:
+        time.sleep(0.2)
+        atualizar()
+        raiz.update()
+        raiz.destroy()
+        print("gui ok")
+        return
+    raiz.update_idletasks()
+    x = (raiz.winfo_screenwidth() - raiz.winfo_reqwidth()) // 2
+    y = max(0, (raiz.winfo_screenheight() - raiz.winfo_reqheight()) // 3)
+    raiz.geometry(f"+{x}+{y}")
+    ciclo()
+    raiz.mainloop()
+
+
+if __name__ == "__main__":
+    if "--resumo" in sys.argv:
+        print(resumo())
+    elif "--teste-gui" in sys.argv:
+        abrir_janela(so_testar=True)
+    else:
+        abrir_janela()

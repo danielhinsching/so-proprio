@@ -395,7 +395,7 @@ S
   mkdir -p "$HOME/.config/lxqt"
   printf '[General]\nso_proprio=1\n[panel1]\nhidable=false\n' > "$(panel_conf)"
   run_visual
-  grep -qx 'so_proprio=4' "$(panel_conf)"
+  grep -qx 'so_proprio=5' "$(panel_conf)"
   awk '/^\[panel1\]/{p=1;next} /^\[/{p=0} p' "$(panel_conf)" | grep -qx 'hidable=true'
 }
 
@@ -591,7 +591,7 @@ S
   awk '/^\[panel1\]/{p=1;next} /^\[/{p=0} p' "$c" | grep -qx 'iconSize=24'
   awk '/^\[panel2\]/{p=1;next} /^\[/{p=0} p' "$c" | grep -qx 'panelSize=26'
   awk '/^\[panel2\]/{p=1;next} /^\[/{p=0} p' "$c" | grep -qx 'iconSize=16'
-  grep -qx 'so_proprio=4' "$c"
+  grep -qx 'so_proprio=5' "$c"
 }
 
 @test "o tema próprio do LXQt é cópia do base e tira a moldura dos botões do painel" {
@@ -618,4 +618,57 @@ S
 @test "rodar de novo não duplica o ajuste do tema próprio" {
   run_visual; run_visual
   [ "$(grep -c 'so-proprio: sem moldura' "$HOME/.local/share/lxqt/themes/so-proprio-claro/lxqt-panel.qss")" -eq 1 ]
+}
+
+# --- painel do PC e área de trabalho limpa ---
+
+painel_python() { # um python que tenha tkinter (o do sistema); vazio se nenhum
+  for py in python3 python3.13 python3.12 python3.11; do
+    "$py" -c 'import tkinter' 2>/dev/null && { echo "$py"; return; }
+  done
+}
+
+@test "a lixeira sai da área de trabalho (PCManFM-Qt: DesktopShortcuts sem Trash)" {
+  run_visual
+  s="$HOME/.config/pcmanfm-qt/lxqt/settings.conf"
+  awk '/^\[Desktop\]/{p=1;next} /^\[/{p=0} p' "$s" | grep -qx 'DesktopShortcuts=Home, Computer, Network'
+  ! grep -qi 'trash' "$s"
+}
+
+@test "painel do PC: --resumo mostra RAM, swap, disco, CPU e o free -h, sem precisar de tela" {
+  run python3 "$REPO/bin/so-proprio-painel" --resumo
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -Eq '^RAM: [0-9.]+ GiB de [0-9.]+ GiB \([0-9]+%\)'
+  echo "$output" | grep -Eq '^Swap: '
+  echo "$output" | grep -Eq '^Disco /: [0-9.]+ GiB de [0-9.]+ GiB \([0-9]+%\)'
+  echo "$output" | grep -Eq '^CPU: [0-9]+%'
+  echo "$output" | grep -Eq '^Mem:'
+}
+
+@test "painel do PC: abre a janela de verdade (tela virtual) e fecha sem erro" {
+  py="$(painel_python)"
+  [ -n "$py" ] || skip "sem python com tkinter"
+  command -v xvfb-run >/dev/null || skip "sem xvfb-run"
+  run xvfb-run -a "$py" "$REPO/bin/so-proprio-painel" --teste-gui
+  [ "$status" -eq 0 ]
+  [ "$output" = "gui ok" ]
+}
+
+@test "o visual instala o painel do PC, o atalho de app, o atalho Ctrl+Alt+M e o item na dock" {
+  run_visual
+  b="$HOME/.local/bin/so-proprio-painel"
+  [ -x "$b" ]
+  cmp "$b" "$REPO/bin/so-proprio-painel"
+  d="$HOME/.local/share/applications/so-proprio-painel.desktop"
+  grep -qx 'Name=Painel do PC' "$d"
+  grep -qx "Exec=$b" "$d"
+  grep -qx 'Icon=utilities-system-monitor' "$d"
+  grep -q "<keybind key=\"C-A-m\"><action name=\"Execute\"><command>$b</command>" "$HOME/.config/openbox/rc.xml"
+  c="$(panel_conf)"
+  awk '/^\[quicklaunch\]/{p=1;next} /^\[/{p=0} p' "$c" | grep -qxF "apps\\5\\desktop=$d"
+  awk '/^\[quicklaunch\]/{p=1;next} /^\[/{p=0} p' "$c" | grep -qxF 'apps\size=5'
+}
+
+@test "python3-tk está nos pacotes do grupo visual" {
+  grep -q '^python3-tk' "$REPO/grupos/visual.txt"
 }

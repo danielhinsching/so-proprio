@@ -64,6 +64,8 @@ Para atualizar um sistema que já está instalado: `git pull`, depois `./add bas
 
 **Fundo:** a área de trabalho e a tela de login ficam pretas; `SO_PROPRIO_FUNDO=tema ./add visual` volta ao degradê do tema.
 
+**Painel do PC e área de trabalho limpa:** o `visual` instala o `so-proprio-painel` (`~/.local/bin`), uma janela leve em Python/Tkinter com gráfico de CPU, barras de RAM, swap, disco e bateria, e o `free -h` completo; só gasta memória enquanto está aberta. Abre pelo ícone na dock (5º item, ao lado de terminal, Firefox, arquivos e VS Code), pelo menu de apps ou com `Ctrl+Alt+M`; `Esc` fecha. Em texto, sem janela: `so-proprio-painel --resumo`. A lixeira sai da área de trabalho (`DesktopShortcuts` do PCManFM-Qt; Home, Computer e Network ficam, e dá para tirar também editando essa linha em `~/.config/pcmanfm-qt/lxqt/settings.conf`).
+
 **Janelas e dock:** botões de fechar/minimizar/maximizar estilo Mac (bolinhas vermelha, amarela e verde, à direita; sem o nome da janela na barra de título); só a dock de baixo é flutuante, arredondada e só com ícones (a barra de cima é reta); o botão do menu usa o asterisco do nofio (precisa do `picom`, instalado pelo `visual`); o `visual` também coloca o usuário no grupo `video` para as teclas de brilho funcionarem (vale após logout e login).
 
 **Tela de login:** o `visual` deixa o LightDM escuro, sem foto de perfil e sem os botões Entrar/Cancelar (digite a senha e Enter); vale no próximo logout/reinício.
