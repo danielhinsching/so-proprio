@@ -719,3 +719,26 @@ painel_python() { # um python que tenha tkinter (o do sistema); vazio se nenhum
   grep -q '^python3-tk' "$REPO/grupos/visual.txt"
   grep -q '^librsvg2-bin' "$REPO/grupos/visual.txt"
 }
+
+@test "painel de fundo de verdade: sem moldura (override-redirect), fora da lista de janelas e instância única" {
+  command -v xvfb-run >/dev/null && command -v openbox >/dev/null && command -v xdotool >/dev/null && command -v wmctrl >/dev/null || skip "sem xvfb/openbox/xdotool/wmctrl"
+  py=/usr/bin/python3; for c in /usr/bin/python3.12 /usr/bin/python3 python3; do "$c" -c 'import tkinter' 2>/dev/null && { py="$c"; break; }; done
+  export XDG_RUNTIME_DIR="$TMP/xr"; mkdir -p "$XDG_RUNTIME_DIR"; chmod 700 "$XDG_RUNTIME_DIR"
+  cat > "$TMP/cena.sh" <<SH
+openbox >/dev/null 2>&1 &
+sleep 1
+"$py" "$REPO/bin/so-proprio-painel" --fundo >/dev/null 2>&1 &
+sleep 1
+"$py" "$REPO/bin/so-proprio-painel" --fundo >/dev/null 2>&1 &
+sleep 3
+echo "janelas=\$(xdotool search --class so-proprio-painel | wc -l)"
+for i in \$(xdotool search --class so-proprio-painel); do xwininfo -id \$i | grep -E 'Override Redirect' ; done
+echo "clientes=\$(wmctrl -l | grep -c 'Painel do PC')"
+kill $(jobs -p) 2>/dev/null || true
+SH
+  run timeout 60 xvfb-run -a bash "$TMP/cena.sh"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -qx 'janelas=1'
+  echo "$output" | grep -q 'Override Redirect State: yes'
+  echo "$output" | grep -qx 'clientes=0'
+}

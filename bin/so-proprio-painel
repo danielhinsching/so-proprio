@@ -146,13 +146,31 @@ def paleta():
                 ok="#30d158", aviso="#ff9f0a", ruim="#ff453a", destaque="#0a84ff")
 
 
+def instancia_unica():
+    """Só um painel de fundo por sessão (duas instâncias desenhariam uma por cima da outra)."""
+    import fcntl
+    pasta = os.environ.get("XDG_RUNTIME_DIR") or "/tmp"
+    trava = open(os.path.join(pasta, "so-proprio-painel-%d.lock" % os.getuid()), "w")
+    try:
+        fcntl.flock(trava, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        return None
+    return trava
+
+
 def abrir_janela(so_testar=False, fundo=False):
     import tkinter as tk
 
+    trava = instancia_unica() if fundo and not so_testar else True
+    if trava is None:
+        return
     c = paleta()
-    raiz = tk.Tk()
+    raiz = tk.Tk(className="so-proprio-painel")
     raiz.title("Painel do PC")
     if fundo:
+        # Escondida até estar pronta: ligar o modo sem moldura DEPOIS de mapeada deixa barra de título e
+        # conteúdo duplicado na tela.
+        raiz.withdraw()
         c["fundo"] = "#000000"  # combina com o papel de parede preto
     raiz.configure(bg=c["fundo"])
     raiz.resizable(False, False)
@@ -292,6 +310,7 @@ def abrir_janela(so_testar=False, fundo=False):
         raiz.overrideredirect(True)
         y = max(30, (raiz.winfo_screenheight() - raiz.winfo_reqheight()) // 2 - 12)  # abaixo da barra, acima da dock
         raiz.geometry(f"+{x}+{y}")
+        raiz.deiconify()
     ciclo()
     raiz.mainloop()
 
