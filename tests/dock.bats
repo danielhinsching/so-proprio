@@ -72,13 +72,8 @@ PY
   [ "$(HOME="$BATS_TEST_TMPDIR/h" logica 'dock.tema_de_icones()')" = "Papirus-Dark" ]
 }
 
-@test "a dock se esconde sozinha: some até uma faixa fina e volta quando o mouse chega na borda" {
-  [ "$(logica 'dock.FAIXA')" -le 4 ]
-  [ "$(logica 'dock.ESCONDE_MS')" -gt 0 ]
-  [ -n "$PY" ] || skip "sem python com PyQt5"
-  command -v xvfb-run >/dev/null || skip "sem xvfb-run"
-  export XDG_RUNTIME_DIR="$BATS_TEST_TMPDIR"; chmod 700 "$XDG_RUNTIME_DIR"
-  run xvfb-run -a "$PY" "$DOCK" --teste-esconder
-  [ "$status" -eq 0 ]
-  [ "$output" = "esconder ok" ]
+@test "a dock sobrepõe os apps: fica sempre visível e não reserva espaço (sem esconder, sem strut)" {
+  ! grep -q "esconder\|ESCONDE" "$DOCK"
+  grep -q '"add,above,sticky"' "$DOCK"
+  grep -q '0,0,0,0,0,0,0,0,0,0,0,0' "$DOCK"
 }

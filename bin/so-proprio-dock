@@ -6,7 +6,7 @@ ilha cresce ou encolhe junto. Clique no ícone: traz a janela (ou minimiza, se j
   so-proprio-dock              roda a dock
   so-proprio-dock --teste-gui  abre, desenha e fecha (usado nos testes)
 
-A ilha se esconde sozinha (fica só uma faixa fina na borda) e volta quando o mouse chega embaixo.
+Fica sempre visível, por cima dos apps (não reserva espaço: janelas maximizadas ficam por baixo).
 """
 import os
 import subprocess
@@ -18,8 +18,6 @@ PAD = 6         # folga entre a borda da ilha e os botões
 ESPACO = 4      # espaço entre botões
 MARGEM = 8      # distância da ilha até a borda de baixo da tela
 RAIO = 16       # arredondamento da ilha
-FAIXA = 3       # pixels que sobram visíveis na borda quando a dock está escondida
-ESCONDE_MS = 900  # tempo com o mouse fora até a dock se esconder
 
 ICONES = {
     "firefox-esr": "firefox-esr", "firefox": "firefox-esr",
@@ -118,7 +116,7 @@ def _paleta():
     return dict(fundo=(28, 28, 30, 235), hover=(255, 255, 255, 30), ativo=(255, 255, 255, 52))
 
 
-def rodar(so_testar=False, esconder_teste=False):
+def rodar(so_testar=False):
     from PyQt5.QtCore import QPoint, QRectF, Qt, QTimer
     from PyQt5.QtGui import QColor, QIcon, QPainter, QPainterPath, QPixmap
     from PyQt5.QtWidgets import QApplication, QMenu, QWidget
@@ -139,11 +137,6 @@ def rodar(so_testar=False, esconder_teste=False):
             self.setWindowTitle("so-proprio-dock")
             self.setMouseTracking(True)
             self.apps = []
-            self.escondida = False
-            self.menu_aberto = False
-            self.cronometro_esconde = QTimer(self)
-            self.cronometro_esconde.setSingleShot(True)
-            self.cronometro_esconde.timeout.connect(self.esconder)
             self.ativa = ""
             self.sobre = -1
             self.menu_icone = QPixmap(_caminho_menu())
@@ -157,33 +150,18 @@ def rodar(so_testar=False, esconder_teste=False):
             x = tela.x() + (tela.width() - w) // 2
             y = tela.y() + tela.height() - h - MARGEM
             self.setFixedSize(w, h)
-            self.base_y = y
-            self.move(x, y + (h - FAIXA if self.escondida else 0))
+            self.move(x, y)
             self.update()
             if self.isVisible():
-                self.reservar(x, w, FAIXA if self.escondida else h)
+                self.por_cima()
 
-        def esconder(self):
-            if not self.menu_aberto and not self.underMouse():
-                self.escondida = True
-                self.ajustar()
-
-        def mostrar(self):
-            self.cronometro_esconde.stop()
-            if self.escondida:
-                self.escondida = False
-                self.ajustar()
-
-        def enterEvent(self, _e):
-            self.mostrar()
-
-        def reservar(self, x, w, h):
-            """_NET_WM_STRUT_PARTIAL: janelas maximizadas não ficam por baixo da ilha."""
-            tela = QApplication.primaryScreen().geometry()
-            baixo = h + MARGEM + (tela.height() - tela.y() - tela.height())
-            valores = [0, 0, 0, baixo, 0, 0, 0, 0, 0, 0, x, x + w - 1]
-            _rodar("xprop", "-id", str(int(self.winId())), "-f", "_NET_WM_STRUT_PARTIAL", "32cccccccccccc",
-                   "-set", "_NET_WM_STRUT_PARTIAL", ",".join(str(v) for v in valores))
+        def por_cima(self):
+            """Sempre acima das janelas e sem reservar espaço: a ilha sobrepõe os apps."""
+            wid = str(int(self.winId()))
+            _rodar("xprop", "-id", wid, "-f", "_NET_WM_STRUT_PARTIAL", "32cccccccccccc",
+                   "-set", "_NET_WM_STRUT_PARTIAL", "0,0,0,0,0,0,0,0,0,0,0,0")
+            _rodar("wmctrl", "-i", "-r", wid, "-b", "add,above,sticky")
+            self.raise_()
 
         def icone(self, classe):
             if classe not in self.icones:
@@ -241,7 +219,6 @@ def rodar(so_testar=False, esconder_teste=False):
         def leaveEvent(self, _e):
             self.sobre = -1
             self.update()
-            self.cronometro_esconde.start(ESCONDE_MS)
 
         def mousePressEvent(self, e):
             i = self.indice(e.pos())
@@ -268,10 +245,7 @@ def rodar(so_testar=False, esconder_teste=False):
             m.addAction("Sair", lambda: subprocess.Popen(["openbox", "--exit"]))
             m.addAction("Reiniciar", lambda: subprocess.Popen(["systemctl", "reboot"]))
             m.addAction("Desligar", lambda: subprocess.Popen(["systemctl", "poweroff"]))
-            self.menu_aberto = True
             m.exec_(self.mapToGlobal(QPoint(0, -m.sizeHint().height() - 6)))
-            self.menu_aberto = False
-            self.cronometro_esconde.start(ESCONDE_MS)
 
     dock = Dock()
 
@@ -289,17 +263,6 @@ def rodar(so_testar=False, esconder_teste=False):
 
     dock.show()
     dock.ajustar()
-    dock.cronometro_esconde.start(ESCONDE_MS * 2)
-    if esconder_teste:
-        dock.esconder()
-        app.processEvents()
-        assert dock.escondida and dock.y() == dock.base_y + dock.height() - FAIXA
-        dock.mostrar()
-        app.processEvents()
-        assert not dock.escondida and dock.y() == dock.base_y
-        dock.close()
-        print("esconder ok")
-        return 0
     if so_testar:
         dock.apps = [("0x1", "firefox-esr"), ("0x2", "qterminal")]
         dock.ajustar()
@@ -316,4 +279,4 @@ def rodar(so_testar=False, esconder_teste=False):
 
 
 if __name__ == "__main__":
-    sys.exit(rodar(so_testar="--teste-gui" in sys.argv, esconder_teste="--teste-esconder" in sys.argv))
+    sys.exit(rodar(so_testar="--teste-gui" in sys.argv))
