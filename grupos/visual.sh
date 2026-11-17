@@ -329,6 +329,14 @@ Exec=picom --config $HOME/.config/picom/picom.conf
 DESKTOP
 
 # --- Brilho: brightnessctl só escreve no backlight para quem está no grupo video ---
+# Regra própria: o grupo video escreve no brilho (não depende da regra do pacote brightnessctl).
+UDEV_TMP="$(mktemp)"
+cat > "$UDEV_TMP" <<'UDEV'
+# so-proprio: permite que o grupo video ajuste o brilho (teclas de brilho)
+SUBSYSTEM=="backlight", ACTION=="add", RUN+="/bin/chgrp video /sys/class/backlight/%k/brightness", RUN+="/bin/chmod g+w /sys/class/backlight/%k/brightness"
+UDEV
+"${SUDO[@]}" install -D -m 0644 "$UDEV_TMP" "$ROOT/etc/udev/rules.d/90-so-proprio-backlight.rules"
+rm -f "$UDEV_TMP"
 # O brightnessctl instala uma regra udev (grupo video); reaplica agora, sem esperar o reinício.
 if [ -n "${SO_PROPRIO_UDEVADM:-}" ] || [ -z "$ROOT" ]; then
   "${SUDO[@]}" "${SO_PROPRIO_UDEVADM:-udevadm}" control --reload 2>/dev/null || true

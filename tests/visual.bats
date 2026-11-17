@@ -476,6 +476,14 @@ S
   grep -q -- 'trigger --subsystem-match=backlight --action=add' "$TMP/udevadm.log"
 }
 
+@test "regra udev própria dá ao grupo video escrita no brilho (sem depender da do pacote)" {
+  run_visual
+  r="$ROOT_PREFIX/etc/udev/rules.d/90-so-proprio-backlight.rules"
+  grep -q 'SUBSYSTEM=="backlight"' "$r"
+  grep -q 'chgrp video /sys/class/backlight/%k/brightness' "$r"
+  grep -q 'chmod g+w /sys/class/backlight/%k/brightness' "$r"
+}
+
 @test "quem já está no grupo video não é alterado" {
   printf '#!/usr/bin/env bash\necho "$@" >> "%s/usermod.log"\n' "$TMP" > "$TMP/usermod-stub"
   chmod +x "$TMP/usermod-stub"
