@@ -1,0 +1,234 @@
+#!/usr/bin/env python3
+"""Dock do so-proprio: ilha flutuante, arredondada e centralizada no rodapé.
+
+Sem nada aberto, só o ícone do menu (asterisco do nofio). Cada app aberto ganha um ícone, e a
+ilha cresce ou encolhe junto. Clique no ícone: traz a janela (ou minimiza, se já for a ativa).
+  so-proprio-dock              roda a dock
+  so-proprio-dock --teste-gui  abre, desenha e fecha (usado nos testes)
+"""
+import os
+import subprocess
+import sys
+
+BOTAO = 40      # lado de cada botão
+ICONE = 28      # tamanho do ícone dentro do botão
+PAD = 6         # folga entre a borda da ilha e os botões
+ESPACO = 4      # espaço entre botões
+MARGEM = 8      # distância da ilha até a borda de baixo da tela
+RAIO = 16       # arredondamento da ilha
+
+ICONES = {
+    "firefox-esr": "firefox-esr", "firefox": "firefox-esr",
+    "code": "vscode", "qterminal": "utilities-terminal",
+    "pcmanfm-qt": "system-file-manager",
+}
+IGNORAR = ("so-proprio", "lxqt-panel", "lxqt-runner")
+
+
+def largura(n_apps):
+    """Largura da ilha com o botão do menu mais n_apps botões de app."""
+    botoes = n_apps + 1
+    return PAD * 2 + botoes * BOTAO + n_apps * ESPACO
+
+
+def nome_icone(classe):
+    c = classe.lower()
+    return ICONES.get(c, c)
+
+
+def janelas(saida_wmctrl):
+    """Lê `wmctrl -lx` (id desktop instância.Classe host título) e devolve [(id, classe, título)]."""
+    achadas = []
+    for linha in saida_wmctrl.splitlines():
+        partes = linha.split(None, 4)
+        if len(partes) < 4 or partes[1] == "-1":
+            continue
+        wid, completa = partes[0], partes[2]
+        if any(x in completa.lower() for x in IGNORAR):
+            continue
+        titulo = partes[4] if len(partes) > 4 else ""
+        achadas.append((wid, completa.split(".")[0], titulo))
+    return achadas
+
+
+def _rodar(*cmd):
+    try:
+        return subprocess.run(cmd, capture_output=True, text=True, timeout=3).stdout
+    except (OSError, subprocess.TimeoutExpired):
+        return ""
+
+
+def _caminho_menu():
+    return os.path.expanduser("~/.local/share/so-proprio/icones/menu.png")
+
+
+def _paleta():
+    try:
+        with open(os.path.expanduser("~/.config/so-proprio/tema")) as f:
+            claro = f.read().strip() == "claro"
+    except OSError:
+        claro = False
+    if claro:
+        return dict(fundo=(245, 245, 247, 235), hover=(0, 0, 0, 28), ativo=(0, 0, 0, 46))
+    return dict(fundo=(28, 28, 30, 235), hover=(255, 255, 255, 30), ativo=(255, 255, 255, 52))
+
+
+def rodar(so_testar=False):
+    from PyQt5.QtCore import QPoint, QRectF, Qt, QTimer
+    from PyQt5.QtGui import QColor, QIcon, QPainter, QPainterPath, QPixmap
+    from PyQt5.QtWidgets import QApplication, QMenu, QWidget
+
+    cores = _paleta()
+    app = QApplication(sys.argv[:1])
+    app.setQuitOnLastWindowClosed(True)
+
+    def cor(t):
+        return QColor(*t)
+
+    class Dock(QWidget):
+        def __init__(self):
+            super().__init__(None, Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Tool)
+            self.setAttribute(Qt.WA_TranslucentBackground)
+            self.setAttribute(Qt.WA_X11NetWmWindowTypeDock)
+            self.setWindowTitle("so-proprio-dock")
+            self.setMouseTracking(True)
+            self.apps = []
+            self.ativa = ""
+            self.sobre = -1
+            self.menu_icone = QPixmap(_caminho_menu())
+            self.icones = {}
+            self.ajustar()
+
+        def ajustar(self):
+            """Muda a largura da ilha conforme os apps abertos e reserva o espaço na tela."""
+            w, h = largura(len(self.apps)), PAD * 2 + BOTAO
+            tela = QApplication.primaryScreen().geometry()
+            x = tela.x() + (tela.width() - w) // 2
+            y = tela.y() + tela.height() - h - MARGEM
+            self.setFixedSize(w, h)
+            self.move(x, y)
+            self.update()
+            if self.isVisible():
+                self.reservar(x, w, h)
+
+        def reservar(self, x, w, h):
+            """_NET_WM_STRUT_PARTIAL: janelas maximizadas não ficam por baixo da ilha."""
+            tela = QApplication.primaryScreen().geometry()
+            baixo = h + MARGEM + (tela.height() - tela.y() - tela.height())
+            valores = [0, 0, 0, baixo, 0, 0, 0, 0, 0, 0, x, x + w - 1]
+            _rodar("xprop", "-id", str(int(self.winId())), "-f", "_NET_WM_STRUT_PARTIAL", "32cccccccccccc",
+                   "-set", "_NET_WM_STRUT_PARTIAL", ",".join(str(v) for v in valores))
+
+        def icone(self, classe):
+            if classe not in self.icones:
+                ic = QIcon.fromTheme(nome_icone(classe))
+                if ic.isNull():
+                    ic = QIcon.fromTheme("application-x-executable")
+                self.icones[classe] = ic
+            return self.icones[classe]
+
+        def retangulo(self, i):  # i = 0 é o menu
+            x = PAD + i * (BOTAO + ESPACO)
+            return QRectF(x, PAD, BOTAO, BOTAO)
+
+        def paintEvent(self, _e):
+            p = QPainter(self)
+            p.setRenderHint(QPainter.Antialiasing)
+            caminho = QPainterPath()
+            caminho.addRoundedRect(QRectF(0, 0, self.width(), self.height()), RAIO, RAIO)
+            p.fillPath(caminho, cor(cores["fundo"]))
+            for i in range(len(self.apps) + 1):
+                r = self.retangulo(i)
+                destaque = None
+                if i > 0 and self.apps[i - 1][0] == self.ativa:
+                    destaque = cores["ativo"]
+                elif i == self.sobre:
+                    destaque = cores["hover"]
+                if destaque:
+                    pb = QPainterPath()
+                    pb.addRoundedRect(r, 11, 11)
+                    p.fillPath(pb, cor(destaque))
+                alvo = r.adjusted((BOTAO - ICONE) / 2, (BOTAO - ICONE) / 2, -(BOTAO - ICONE) / 2, -(BOTAO - ICONE) / 2)
+                if i == 0:
+                    if not self.menu_icone.isNull():
+                        p.drawPixmap(alvo.toRect(), self.menu_icone)
+                else:
+                    self.icone(self.apps[i - 1][1]).paint(p, alvo.toRect())
+            p.end()
+
+        def indice(self, pos):
+            for i in range(len(self.apps) + 1):
+                if self.retangulo(i).contains(pos.x(), pos.y()):
+                    return i
+            return -1
+
+        def mouseMoveEvent(self, e):
+            i = self.indice(e.pos())
+            if i != self.sobre:
+                self.sobre = i
+                self.update()
+
+        def leaveEvent(self, _e):
+            self.sobre = -1
+            self.update()
+
+        def mousePressEvent(self, e):
+            i = self.indice(e.pos())
+            if i == 0:
+                self.abrir_menu()
+            elif i > 0:
+                wid = self.apps[i - 1][0]
+                if wid == self.ativa:
+                    _rodar("xdotool", "windowminimize", wid)
+                else:
+                    _rodar("wmctrl", "-ia", wid)
+                QTimer.singleShot(150, atualizar)
+
+        def abrir_menu(self):
+            m = QMenu(self)
+            m.setStyleSheet("QMenu{background:#1c1c1e;color:#f5f5f7;border-radius:10px;padding:6px}"
+                            "QMenu::item{padding:6px 18px;border-radius:6px}"
+                            "QMenu::item:selected{background:#3a3a3c}QMenu::separator{height:1px;background:#3a3a3c;margin:4px 8px}")
+            for nome, cmd in (("Firefox", ["firefox-esr"]), ("VS Code", ["code"]), ("Terminal", ["qterminal"]),
+                              ("Arquivos", ["pcmanfm-qt"]), ("Buscar app…", ["lxqt-runner"])):
+                m.addAction(nome, lambda c=cmd: subprocess.Popen(c, start_new_session=True))
+            m.addSeparator()
+            m.addAction("Bloquear", lambda: subprocess.Popen(["light-locker-command", "-l"]))
+            m.addAction("Sair", lambda: subprocess.Popen(["openbox", "--exit"]))
+            m.addAction("Reiniciar", lambda: subprocess.Popen(["systemctl", "reboot"]))
+            m.addAction("Desligar", lambda: subprocess.Popen(["systemctl", "poweroff"]))
+            m.exec_(self.mapToGlobal(QPoint(0, -m.sizeHint().height() - 6)))
+
+    dock = Dock()
+
+    def atualizar():
+        novas = [(w, c) for w, c, _t in janelas(_rodar("wmctrl", "-lx"))]
+        ativa_dec = _rodar("xdotool", "getactivewindow").strip()
+        ativa = "0x%08x" % int(ativa_dec) if ativa_dec.isdigit() else ""
+        if novas != dock.apps or ativa != dock.ativa:
+            mudou_tamanho = len(novas) != len(dock.apps)
+            dock.apps, dock.ativa = novas, ativa
+            if mudou_tamanho:
+                dock.ajustar()
+            else:
+                dock.update()
+
+    dock.show()
+    dock.ajustar()
+    if so_testar:
+        dock.apps = [("0x1", "firefox-esr"), ("0x2", "qterminal")]
+        dock.ajustar()
+        app.processEvents()
+        assert dock.width() == largura(2)
+        dock.close()
+        print("dock ok")
+        return 0
+    cronometro = QTimer()
+    cronometro.timeout.connect(atualizar)
+    cronometro.start(700)
+    atualizar()
+    return app.exec_()
+
+
+if __name__ == "__main__":
+    sys.exit(rodar(so_testar="--teste-gui" in sys.argv))

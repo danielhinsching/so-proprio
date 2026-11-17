@@ -2,7 +2,7 @@
 # Visual do desktop: tema escuro, painel (dock central + barra de status),
 # uma única área de trabalho e atalhos de teclado no Openbox.
 # Não sobrescreve o que você já editou: o painel só é regerado se faltar a marca
-# so_proprio=6 (ou com SO_PROPRIO_VISUAL_FORCE=1); o rc.xml do Openbox só ganha o que falta.
+# so_proprio=7 (ou com SO_PROPRIO_VISUAL_FORCE=1); o rc.xml do Openbox só ganha o que falta.
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -75,14 +75,7 @@ LXQtTaskButton:pressed {
 QSS
   cat >> "$CUSTOM_DIR/lxqt-panel.qss" <<QSS
 
-/* so-proprio: só a dock de baixo é flutuante e arredondada (precisa do picom para os cantos transparentes);
-   a barra de cima fica reta e colada na borda */
-LXQtPanel[position="Bottom"] #BackgroundWidget {
-    background-color: $BG;
-    border: 1px solid $BORDER;
-    border-radius: 16px;
-    margin: 4px 4px 8px 4px;
-}
+/* so-proprio: a barra de cima fica reta e colada na borda (a dock de baixo é o so-proprio-dock) */
 LXQtPanel[position="Top"] #BackgroundWidget {
     background-color: $BG;
     border: none;
@@ -107,9 +100,10 @@ mkdir -p "$(dirname "$WALL")"
 # Fundo preto por padrão; SO_PROPRIO_FUNDO=tema usa o degradê do tema claro/escuro.
 FUNDO=preto; [ "${SO_PROPRIO_FUNDO:-preto}" = tema ] && FUNDO="$MODE"
 cp "$REPO_DIR/dotfiles/wallpaper/$FUNDO.png" "$WALL"
-# O PCManFM-Qt (gerenciador da área de trabalho) reescreve o settings.conf ao fechar; por isso ele é
-# parado ANTES de editar e religado DEPOIS, senão a configuração antiga voltaria no logout.
+# O PCManFM-Qt (gerenciador da área de trabalho) reescreve o settings.conf ao sair; por isso ele é
+# encerrado ANTES de editar e religado DEPOIS, senão a configuração antiga voltaria no logout.
 PCMANFM="${SO_PROPRIO_PCMANFM:-pcmanfm-qt}"
+PCMAN_PKILL="${SO_PROPRIO_PKILL:-pkill}"
 if [ -n "${SO_PROPRIO_PCMANFM_RODANDO:-}" ]; then
   PCMAN_RODANDO="$SO_PROPRIO_PCMANFM_RODANDO"
 elif pgrep -f 'pcmanfm-qt --desktop' >/dev/null 2>&1; then
@@ -118,12 +112,14 @@ else
   PCMAN_RODANDO=0
 fi
 if [ "$PCMAN_RODANDO" = 1 ]; then
-  "$PCMANFM" --desktop-off --profile=lxqt >/dev/null 2>&1 || true
+  "$PCMAN_PKILL" -f 'pcmanfm-qt --desktop' >/dev/null 2>&1 || true
   sleep "${SO_PROPRIO_ESPERA:-1}"
 fi
 ini_set "$HOME/.config/pcmanfm-qt/lxqt/settings.conf" Desktop Wallpaper "$WALL"
 ini_set "$HOME/.config/pcmanfm-qt/lxqt/settings.conf" Desktop WallpaperMode zoom
-# Área de trabalho sem ícones: nem lixeira, nem Home, Computer ou Network.
+# Área de trabalho sem ícones: HideItems esconde tudo (é o "Hide Desktop Items" do menu do botão direito)
+# e DesktopShortcuts vazio tira lixeira, Home, Computer e Network.
+ini_set "$HOME/.config/pcmanfm-qt/lxqt/settings.conf" Desktop HideItems true
 ini_set "$HOME/.config/pcmanfm-qt/lxqt/settings.conf" Desktop DesktopShortcuts ""
 if [ "$PCMAN_RODANDO" = 1 ]; then
   nohup "$PCMANFM" --desktop --profile=lxqt >/dev/null 2>&1 &
@@ -360,6 +356,20 @@ if command -v rsvg-convert >/dev/null 2>&1; then
 fi
 echo "Painel do PC: fixo no fundo da área de trabalho, aparece no próximo login (ou: so-proprio-painel --fundo &)."
 
+# --- Dock própria (so-proprio-dock): ilha só com o menu, cresce com os apps abertos ---
+DOCK_BIN="$HOME/.local/bin/so-proprio-dock"
+mkdir -p "$HOME/.local/bin" "$HOME/.config/autostart" "$HOME/.local/share/so-proprio/icones"
+install -m 0755 "$REPO_DIR/bin/so-proprio-dock" "$DOCK_BIN"
+cp "$REPO_DIR/dotfiles/icons/so-proprio-menu-$MODE.png" "$HOME/.local/share/so-proprio/icones/menu.png"
+cat > "$HOME/.config/autostart/so-proprio-dock.desktop" <<DESKTOP
+[Desktop Entry]
+Type=Application
+Name=Dock (so-proprio)
+Comment=Ilha flutuante com o menu e os apps abertos
+Exec=sh -c "sleep 3; exec $DOCK_BIN"
+DESKTOP
+echo "Dock: aparece no próximo login (ou: so-proprio-dock &)."
+
 # --- Compositor leve (picom): cantos arredondados e transparentes da dock ---
 mkdir -p "$HOME/.config/picom"
 cat > "$HOME/.config/picom/picom.conf" <<'PICOM'
@@ -399,7 +409,7 @@ if ! printf '%s\n' "$GRUPOS_USUARIO" | tr ' ' '\n' | grep -qx video; then
 fi
 
 # --- Painel ---
-if [ -f "$PANEL" ] && grep -qx 'so_proprio=6' "$PANEL" && [ "${SO_PROPRIO_VISUAL_FORCE:-0}" != "1" ]; then
+if [ -f "$PANEL" ] && grep -qx 'so_proprio=7' "$PANEL" && [ "${SO_PROPRIO_VISUAL_FORCE:-0}" != "1" ]; then
   echo "Painel: já configurado pelo so-proprio, mantido (SO_PROPRIO_VISUAL_FORCE=1 para regerar)."
 else
   mkdir -p "$LXQT_DIR"
@@ -409,29 +419,10 @@ else
   cat > "$PANEL" <<'CONF'
 [General]
 __userfile__=true
-panels=panel1, panel2
-so_proprio=6
+panels=panel1
+so_proprio=7
 
 [panel1]
-alignment=0
-animation-duration=0
-desktop=0
-hidable=true
-hide-on-overlap=false
-iconSize=24
-lineCount=1
-lockPanel=false
-opacity=100
-panelSize=52
-plugins=mainmenu, quicklaunch, taskbar
-position=Bottom
-reserve-space=false
-show-delay=0
-visible-margin=true
-width=40
-width-percent=true
-
-[panel2]
 alignment=-1
 animation-duration=0
 desktop=0
@@ -449,29 +440,6 @@ show-delay=0
 visible-margin=false
 width=100
 width-percent=true
-
-[mainmenu]
-alignment=Left
-icon=so-proprio-menu
-showText=false
-type=mainmenu
-
-[quicklaunch]
-alignment=Left
-apps\1\desktop=/usr/share/applications/firefox-esr.desktop
-apps\2\desktop=/usr/share/applications/code.desktop
-apps\3\desktop=/usr/share/applications/qterminal.desktop
-apps\4\desktop=/usr/share/applications/pcmanfm-qt.desktop
-apps\size=4
-type=quicklaunch
-
-[taskbar]
-alignment=Left
-buttonStyle=Icon
-buttonWidth=40
-buttonHeight=40
-showOnlyCurrentDesktopTasks=false
-type=taskbar
 
 [statusnotifier]
 alignment=Right
@@ -491,7 +459,7 @@ type=volume
 alignment=Right
 type=worldclock
 CONF
-  echo "Painel: dock central embaixo (menu, apps, janelas) e barra em cima (rede, Bluetooth, bateria, volume, hora)."
+  echo "Painel: barra em cima (rede, Bluetooth, bateria, volume, hora); a dock de baixo é o so-proprio-dock."
   echo "Faça logout e login para o painel novo aparecer."
 fi
 

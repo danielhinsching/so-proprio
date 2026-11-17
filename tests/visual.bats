@@ -72,14 +72,12 @@ panel_conf() { echo "$HOME/.config/lxqt/panel.conf"; }
 
 # --- painel ---
 
-@test "visual.sh cria dois painéis: dock central embaixo e barra de status em cima" {
+@test "visual.sh cria um painel só: a barra de status em cima (a dock é o so-proprio-dock)" {
   run_visual
   c="$(panel_conf)"
-  grep -qx 'panels=panel1, panel2' "$c" || grep -qx 'panels=panel1,panel2' "$c"
-  grep -q '^position=Bottom' "$c"
+  grep -qx 'panels=panel1' "$c"
   grep -q '^position=Top' "$c"
-  # a dock é centralizada e não ocupa a largura toda
-  awk '/^\[panel1\]/{p=1;next} /^\[/{p=0} p' "$c" | grep -qx 'alignment=0'
+  ! grep -q '^position=Bottom' "$c"
   awk '/^\[panel1\]/{p=1;next} /^\[/{p=0} p' "$c" | grep -qx 'width-percent=true'
 }
 
@@ -88,15 +86,13 @@ panel_conf() { echo "$HOME/.config/lxqt/panel.conf"; }
   ! grep -qi 'desktopswitch' "$(panel_conf)"
 }
 
-@test "o painel tem menu, atalhos de apps, janelas, bandeja, volume e relógio" {
+@test "a barra tem bandeja, rede, volume e relógio, sem menu nem atalhos (isso é da dock)" {
   run_visual
   c="$(panel_conf)"
-  for t in mainmenu quicklaunch taskbar statusnotifier tray volume worldclock; do
+  for t in statusnotifier tray volume worldclock; do
     grep -qx "type=$t" "$c" || { echo "falta $t"; return 1; }
   done
-  grep -q 'firefox-esr.desktop' "$c"
-  grep -q 'code.desktop' "$c"
-  grep -q 'qterminal.desktop' "$c"
+  ! grep -qE '^type=(mainmenu|quicklaunch|taskbar)' "$c"
 }
 
 @test "visual.sh guarda backup do painel existente e não sobrescreve depois" {
@@ -383,25 +379,23 @@ S
 
 # --- segunda rodada de ajustes do visual ---
 
-@test "a dock de baixo se esconde sozinha e a barra de cima não" {
+@test "a barra de cima não se esconde e reserva espaço" {
   run_visual
   c="$(panel_conf)"
-  awk '/^\[panel1\]/{p=1;next} /^\[/{p=0} p' "$c" | grep -qx 'hidable=true'
-  awk '/^\[panel1\]/{p=1;next} /^\[/{p=0} p' "$c" | grep -qx 'reserve-space=false'
-  awk '/^\[panel2\]/{p=1;next} /^\[/{p=0} p' "$c" | grep -qx 'hidable=false'
+  awk '/^\[panel1\]/{p=1;next} /^\[/{p=0} p' "$c" | grep -qx 'hidable=false'
+  awk '/^\[panel1\]/{p=1;next} /^\[/{p=0} p' "$c" | grep -qx 'reserve-space=true'
 }
 
 @test "um painel da versão antiga (so_proprio=1) é regerado com a versão nova" {
   mkdir -p "$HOME/.config/lxqt"
-  printf '[General]\nso_proprio=1\n[panel1]\nhidable=false\n' > "$(panel_conf)"
+  printf '[General]\nso_proprio=1\n[panel1]\nhidable=true\nposition=Bottom\n' > "$(panel_conf)"
   run_visual
-  grep -qx 'so_proprio=6' "$(panel_conf)"
-  awk '/^\[panel1\]/{p=1;next} /^\[/{p=0} p' "$(panel_conf)" | grep -qx 'hidable=true'
+  grep -qx 'so_proprio=7' "$(panel_conf)"
+  ! grep -q '^position=Bottom' "$(panel_conf)"
 }
 
-@test "o botão do menu usa um ícone próprio, instalado no tema hicolor" {
+@test "o asterisco do menu fica instalado como PNG no tema hicolor e para a dock" {
   run_visual
-  grep -qx 'icon=so-proprio-menu' "$(panel_conf)"
   i="$HOME/.local/share/icons/hicolor/64x64/apps/so-proprio-menu.png"
   [ "$(head -c 8 "$i" | od -An -tx1 | tr -d ' \n')" = "89504e470d0a1a0a" ]
 }
@@ -478,12 +472,10 @@ S
   grep -qx 'window.inactive.button.max.toggled.unpressed.image.color: #c7c7cc' "$t"
 }
 
-@test "dock: só ícones nos apps abertos, flutuante e arredondada (QSS + picom)" {
+@test "dock: o picom dá os cantos transparentes e não sobra regra de dock no QSS do LXQt" {
   run_visual
-  c="$(panel_conf)"
-  awk '/^\[taskbar\]/{p=1;next} /^\[/{p=0} p' "$c" | grep -qx 'buttonWidth=40'
   q="$HOME/.local/share/lxqt/themes/so-proprio-claro/lxqt-panel.qss"
-  awk '/^LXQtPanel\[position="Bottom"\] #BackgroundWidget \{/{p=1;next} /^\}/{p=0} p' "$q" | grep -q 'margin:'
+  ! grep -q 'position="Bottom"' "$q"
   grep -qx 'backend = "xrender";' "$HOME/.config/picom/picom.conf"
   grep -q '^Exec=.*picom' "$HOME/.config/autostart/so-proprio-picom.desktop"
 }
@@ -553,10 +545,9 @@ S
   grep -qx 'window.inactive.label.text.color: #ececec' "$t"
 }
 
-@test "só a dock de baixo é flutuante; a barra de cima fica reta e colada" {
+@test "a barra de cima fica reta e colada na borda" {
   run_visual
   q="$HOME/.local/share/lxqt/themes/so-proprio-claro/lxqt-panel.qss"
-  awk '/^LXQtPanel\[position="Bottom"\] #BackgroundWidget \{/{p=1;next} /^\}/{p=0} p' "$q" | grep -q 'border-radius: 16px'
   ! grep -q '^LXQtPanel #BackgroundWidget' "$q"
   awk '/^LXQtPanel\[position="Top"\] #BackgroundWidget \{/{p=1;next} /^\}/{p=0} p' "$q" | grep -q 'border-radius: 0px'
 }
@@ -584,14 +575,12 @@ S
 
 # --- terceira rodada: ícones sem moldura ---
 
-@test "os painéis são menores, com ícones menores" {
+@test "a barra de cima é pequena, com ícones pequenos" {
   run_visual
   c="$(panel_conf)"
-  awk '/^\[panel1\]/{p=1;next} /^\[/{p=0} p' "$c" | grep -qx 'panelSize=52'
-  awk '/^\[panel1\]/{p=1;next} /^\[/{p=0} p' "$c" | grep -qx 'iconSize=24'
-  awk '/^\[panel2\]/{p=1;next} /^\[/{p=0} p' "$c" | grep -qx 'panelSize=26'
-  awk '/^\[panel2\]/{p=1;next} /^\[/{p=0} p' "$c" | grep -qx 'iconSize=16'
-  grep -qx 'so_proprio=6' "$c"
+  awk '/^\[panel1\]/{p=1;next} /^\[/{p=0} p' "$c" | grep -qx 'panelSize=26'
+  awk '/^\[panel1\]/{p=1;next} /^\[/{p=0} p' "$c" | grep -qx 'iconSize=16'
+  grep -qx 'so_proprio=7' "$c"
 }
 
 @test "o tema próprio do LXQt é cópia do base e tira a moldura dos botões do painel" {
@@ -628,19 +617,21 @@ painel_python() { # um python que tenha tkinter (o do sistema); vazio se nenhum
   done
 }
 
-@test "a área de trabalho fica sem ícones (lixeira, Home, Computer, Network): DesktopShortcuts vazio" {
+@test "a área de trabalho fica sem ícones: HideItems=true e DesktopShortcuts vazio" {
   run_visual
   s="$HOME/.config/pcmanfm-qt/lxqt/settings.conf"
+  awk '/^\[Desktop\]/{p=1;next} /^\[/{p=0} p' "$s" | grep -qx 'HideItems=true'
   awk '/^\[Desktop\]/{p=1;next} /^\[/{p=0} p' "$s" | grep -qx 'DesktopShortcuts='
   ! grep -qi 'trash' "$s"
 }
 
-@test "o gerenciador da área de trabalho é parado antes de editar o settings.conf e religado depois" {
-  printf '#!/usr/bin/env bash\necho "$@" >> "%s/pcmanfm.log"\n' "$TMP" > "$TMP/pcmanfm-stub"
-  chmod +x "$TMP/pcmanfm-stub"
-  SO_PROPRIO_PCMANFM="$TMP/pcmanfm-stub" SO_PROPRIO_PCMANFM_RODANDO=1 run_visual
-  [ "$(sed -n 1p "$TMP/pcmanfm.log")" = "--desktop-off --profile=lxqt" ]
-  [ "$(sed -n 2p "$TMP/pcmanfm.log")" = "--desktop --profile=lxqt" ]
+@test "o gerenciador da área de trabalho é encerrado antes de editar o settings.conf e religado depois" {
+  printf '#!/usr/bin/env bash\necho "pcmanfm $@" >> "%s/pcmanfm.log"\n' "$TMP" > "$TMP/pcmanfm-stub"
+  printf '#!/usr/bin/env bash\necho "pkill $@" >> "%s/pcmanfm.log"\n' "$TMP" > "$TMP/pkill-stub"
+  chmod +x "$TMP/pcmanfm-stub" "$TMP/pkill-stub"
+  SO_PROPRIO_PCMANFM="$TMP/pcmanfm-stub" SO_PROPRIO_PKILL="$TMP/pkill-stub" SO_PROPRIO_PCMANFM_RODANDO=1 run_visual
+  [ "$(sed -n 1p "$TMP/pcmanfm.log")" = "pkill -f pcmanfm-qt --desktop" ]
+  [ "$(sed -n 2p "$TMP/pcmanfm.log")" = "pcmanfm --desktop --profile=lxqt" ]
 }
 
 @test "sem o gerenciador da área de trabalho rodando, ele não é mexido" {
@@ -681,8 +672,24 @@ painel_python() { # um python que tenha tkinter (o do sistema); vazio se nenhum
   grep -qx "Exec=sh -c \"sleep 6; exec $b --fundo\"" "$a"
   [ ! -e "$HOME/.local/share/applications/so-proprio-painel.desktop" ]
   ! grep -q 'key="C-A-m"' "$HOME/.config/openbox/rc.xml"
-  awk '/^\[quicklaunch\]/{p=1;next} /^\[/{p=0} p' "$(panel_conf)" | grep -qxF 'apps\size=4'
   ! grep -q 'so-proprio-painel' "$(panel_conf)"
+}
+
+@test "a dock do rodapé é a so-proprio-dock: autostart, e o painel do LXQt fica só com a barra de cima" {
+  run_visual
+  b="$HOME/.local/bin/so-proprio-dock"
+  [ -x "$b" ]
+  cmp "$b" "$REPO/bin/so-proprio-dock"
+  grep -qx "Exec=sh -c \"sleep 3; exec $b\"" "$HOME/.config/autostart/so-proprio-dock.desktop"
+  grep -qx 'panels=panel1' "$(panel_conf)"
+  ! grep -qE '^position=Bottom|^plugins=.*(mainmenu|quicklaunch)|^\[(mainmenu|quicklaunch)\]' "$(panel_conf)"
+  grep -qx 'plugins=statusnotifier, tray, volume, worldclock' "$(panel_conf)"
+}
+
+@test "o menu da dock usa o asterisco do nofio (PNG do tema) e o grupo instala PyQt5, wmctrl e xdotool" {
+  run_visual
+  [ -f "$HOME/.local/share/so-proprio/icones/menu.png" ]
+  for pkg in python3-pyqt5 wmctrl xdotool; do grep -q "^$pkg" "$REPO/grupos/visual.txt"; done
 }
 
 @test "o painel de fundo substitui o Conky: autostart removido e lembrado para o ./add desktop" {

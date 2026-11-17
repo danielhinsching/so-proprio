@@ -52,7 +52,7 @@ A ideia: instalar só a base, e depois adicionar um grupo de cada vez com `./add
 | `base` | sudo, NetworkManager (com Wi-Fi), git, curl, gnupg, htop, zram; comenta o `/etc/network/interfaces` para o NetworkManager assumir a rede (original em `interfaces.so-proprio.bak`) |
 | `tuning` | ajustes de HD: `noatime`, `swappiness=10`, zram (zstd, 25%), agendador `bfq`, `GRUB_TIMEOUT=1` (menu do GRUB espera 1 s), desativa CUPS/Avahi/ModemManager se existirem |
 | `desktop` | LXQt + Openbox, LightDM, QTerminal, PCManFM-Qt, gerenciamento de energia, Conky com `free -h` e `systemd-analyze` no canto superior direito da tela |
-| `visual` | visual limpo (estilo macOS/Windows 11): tema claro, ícones Papirus, fonte Inter, janelas planas, papel de parede suave, painel (dock central com menu, apps e janelas; barra em cima com rede, Bluetooth, bateria, volume e hora), 1 área de trabalho e atalhos: **Ctrl+Alt+T** terminal, **Ctrl+Alt+F** Firefox, **Ctrl+Alt+C** VS Code |
+| `visual` | visual limpo (estilo macOS/Windows 11): tema claro, ícones Papirus, fonte Inter, janelas planas, papel de parede suave, dock própria (menu e janelas abertas); barra em cima com rede, Bluetooth, bateria, volume e hora), 1 área de trabalho e atalhos: **Ctrl+Alt+T** terminal, **Ctrl+Alt+F** Firefox, **Ctrl+Alt+C** VS Code |
 | `navegador` | Firefox ESR com preferências de baixo consumo (cache em memória, menos processos), uBlock Origin e sem telemetria |
 | `dev` | Python (venv, pipx), build-essential, VS Code (repositório Microsoft), fnm para Node.js |
 | `vm` | VirtualBox (repositório Oracle). Opcional |
@@ -66,7 +66,7 @@ Para atualizar um sistema que já está instalado: `git pull`, depois `./add bas
 
 **Painel do PC fixo no fundo e área de trabalho limpa:** o `visual` instala o `so-proprio-painel` (`~/.local/bin`) e o inicia sozinho no login (`--fundo`): fica centralizado no fundo da área de trabalho, abaixo das janelas, com os 4 apps clicáveis (Firefox, VS Code, Terminal e Arquivos), gráfico de CPU, barras de RAM, swap, disco e bateria e o `free -h` completo. Não é um app: não tem janela, item na dock nem atalho. Para ver sem relogar: `so-proprio-painel --fundo &`; em texto: `so-proprio-painel --resumo`. Ele substitui o Conky (o autostart antigo é removido e o `./add desktop` não o recria). A área de trabalho fica sem nenhum ícone (lixeira, Home, Computer e Network): o `visual` para o gerenciador da área de trabalho, grava `DesktopShortcuts=` vazio e o religa, senão ele regravaria a config antiga ao sair.
 
-**Janelas e dock:** botões de fechar/minimizar/maximizar estilo Mac (bolinhas vermelha, amarela e verde, à direita; sem o nome da janela na barra de título); só a dock de baixo é flutuante, arredondada e só com ícones (a barra de cima é reta); o botão do menu usa o asterisco do nofio (precisa do `picom`, instalado pelo `visual`); o `visual` também coloca o usuário no grupo `video` para as teclas de brilho funcionarem (vale após logout e login).
+**Janelas e dock:** botões de fechar/minimizar/maximizar estilo Mac (bolinhas vermelha, amarela e verde, à direita; sem o nome da janela na barra de título); a dock de baixo é o `so-proprio-dock` (PyQt5, autostart): uma ilha flutuante e arredondada, centralizada, que sem nada aberto mostra só o asterisco do nofio (menu: apps, buscar, bloquear, sair, reiniciar, desligar) e cresce um ícone por app aberto (clique traz a janela; clique de novo minimiza); a barra de cima, do LXQt, é reta e fica com rede, Bluetooth, bateria, volume e hora (precisa do `picom` para os cantos transparentes, instalado pelo `visual`); o `visual` também coloca o usuário no grupo `video` para as teclas de brilho funcionarem (vale após logout e login).
 
 **Tela de login:** o `visual` deixa o LightDM escuro, sem foto de perfil e sem os botões Entrar/Cancelar (digite a senha e Enter); vale no próximo logout/reinício.
 
@@ -76,7 +76,7 @@ Para atualizar um sistema que já está instalado: `git pull`, depois `./add bas
 
 **Ícones sem moldura:** o `visual` cria o tema `so-proprio-claro`/`so-proprio-escuro` (cópia do tema base do LXQt com os botões do painel sem borda), e os painéis ficam menores (dock 36 px, barra 26 px). Para mudar tamanhos, edite `~/.config/lxqt/panel.conf` (`panelSize` e `iconSize`).
 
-**Painel e atalhos:** o `visual` só regera o painel se faltar a marca `so_proprio=1` em `~/.config/lxqt/panel.conf`, então suas edições ficam. Para voltar ao do repo: `SO_PROPRIO_VISUAL_FORCE=1 ./add visual` (o anterior fica em `panel.conf.so-proprio.bak`). Os atalhos ficam em `~/.config/openbox/rc.xml`.
+**Painel e atalhos:** o `visual` só regera a barra de cima se faltar a marca `so_proprio=7` em `~/.config/lxqt/panel.conf`, então suas edições ficam. Para voltar ao do repo: `SO_PROPRIO_VISUAL_FORCE=1 ./add visual` (o anterior fica em `panel.conf.so-proprio.bak`). Os atalhos ficam em `~/.config/openbox/rc.xml`.
 
 **Firefox:** confira em `about:policies` se as políticas estão ativas. As preferências são padrões e dá para mudar em `about:config`. O uBlock Origin é baixado na primeira abertura, com rede.
 

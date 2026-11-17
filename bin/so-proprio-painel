@@ -211,7 +211,7 @@ def abrir_janela(so_testar=False, fundo=False):
         info = tk.Label(cab, text="", bg=c["fundo"], fg=c["suave"], font=fonte)
         info.pack(side="right")
 
-    cartao("cpu", "CPU", 70)
+    cartao("cpu", "CPU", 56)
     cartao("ram", "Memória RAM", 12)
     cartao("swap", "Swap", 12)
     cartao("disco", "Disco (/)", 12)
@@ -288,13 +288,9 @@ def abrir_janela(so_testar=False, fundo=False):
     y = max(0, (raiz.winfo_screenheight() - raiz.winfo_reqheight()) // 3)
     raiz.geometry(f"+{x}+{y}")
     if fundo:
-        # Tipo "desktop": sem moldura, abaixo de todas as janelas, como o Conky.
-        try:
-            raiz.attributes("-type", "desktop")
-        except tk.TclError:
-            raiz.overrideredirect(True)
-            raiz.lower()
-        y = max(0, (raiz.winfo_screenheight() - raiz.winfo_reqheight()) // 2)
+        # Sem gerenciador de janelas: nada de barra de título, borda ou botões; fica fixo na tela.
+        raiz.overrideredirect(True)
+        y = max(30, (raiz.winfo_screenheight() - raiz.winfo_reqheight()) // 2 - 12)  # abaixo da barra, acima da dock
         raiz.geometry(f"+{x}+{y}")
     ciclo()
     raiz.mainloop()

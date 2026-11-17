@@ -13,3 +13,7 @@ light-locker          # tela de bloqueio (Super+L), usa o LightDM
 picom                 # compositor leve: cantos arredondados e transparentes da dock
 python3-tk            # janela do Painel do PC (gráficos de RAM, CPU e disco)
 librsvg2-bin          # converte os ícones SVG em PNG para o painel de fundo
+python3-pyqt5         # a dock própria (ilha flutuante)
+wmctrl                # lista e traz as janelas para a dock
+xdotool               # janela ativa e minimizar pela dock
+x11-utils             # xprop: reserva o espaço da dock na tela
