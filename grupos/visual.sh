@@ -176,10 +176,12 @@ THEME
   for win in active inactive; do
     bgc="$BG"; [ "$win" = inactive ] && bgc="$BG_INACTIVE"
     img="$TEXT"; [ "$win" = inactive ] && img="$SUBTLE"
-    for st in unpressed pressed hover disabled toggled; do
+    for st in unpressed pressed hover disabled toggled.unpressed toggled.pressed toggled.hover; do
       c="$bgc"; ic="$img"
-      [ "$st" = hover ] && { c="$HOVER"; ic="$TEXT"; }
-      [ "$st" = pressed ] && { c="$PRESSED"; ic="$TEXT"; }
+      case "$st" in
+        hover|toggled.hover) c="$HOVER"; ic="$TEXT" ;;
+        pressed|toggled.pressed) c="$PRESSED"; ic="$TEXT" ;;
+      esac
       [ "$st" = disabled ] && ic="$SUBTLE"
       printf 'window.%s.button.%s.bg: flat solid\n' "$win" "$st"
       printf 'window.%s.button.%s.bg.color: %s\n' "$win" "$st" "$c"
@@ -191,7 +193,7 @@ THEME
         close) mac='#ff5f57' ;; iconify) mac='#febc2e' ;; max) mac='#28c840' ;;
       esac
       [ "$win" = inactive ] && mac="$MAC_INATIVO"
-      for st in unpressed pressed hover disabled toggled; do
+      for st in unpressed pressed hover disabled toggled.unpressed toggled.pressed toggled.hover; do
         printf 'window.%s.button.%s.%s.bg: flat solid\n' "$win" "$btn" "$st"
         printf 'window.%s.button.%s.%s.bg.color: %s\n' "$win" "$btn" "$st" "$bgc"
         printf 'window.%s.button.%s.%s.image.color: %s\n' "$win" "$btn" "$st" "$mac"

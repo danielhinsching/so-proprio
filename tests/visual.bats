@@ -450,6 +450,11 @@ S
   grep -qx 'window.active.button.iconify.unpressed.image.color: #febc2e' "$t"
   grep -qx 'window.active.button.max.unpressed.image.color: #28c840' "$t"
   grep -qx 'window.active.button.close.hover.bg: flat solid' "$t"
+  # janela maximizada usa os estados toggled.*: o verde tem de continuar verde
+  grep -qx 'window.active.button.max.toggled.unpressed.image.color: #28c840' "$t"
+  grep -qx 'window.active.button.max.toggled.hover.image.color: #28c840' "$t"
+  grep -qx 'window.active.button.max.toggled.pressed.image.color: #28c840' "$t"
+  grep -qx 'window.inactive.button.max.toggled.unpressed.image.color: #c7c7cc' "$t"
 }
 
 @test "dock: só ícones nos apps abertos, flutuante e arredondada (QSS + picom)" {
