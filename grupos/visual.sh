@@ -442,8 +442,11 @@ if [ -f "$RC" ]; then
   sed -i '/<desktops>/,/<\/desktops>/ s|<number>[0-9]*</number>|<number>1</number>|' "$RC"
   sed -i -E '/<theme>/,/<\/theme>/ { s#<name>(Clearlooks|Onyx|SoProprio)</name>#<name>SoProprio</name>#; s#<titleLayout>[A-Z]*</titleLayout>#<titleLayout>LIMC</titleLayout># }' "$RC"
   add_key() { # <tecla> <comando>
-    grep -q "key=\"$1\"" "$RC" && return 0
-    sed -i "s|</keyboard>|  <keybind key=\"$1\"><action name=\"Execute\"><command>$2</command></action></keybind>\n</keyboard>|" "$RC"
+    local linha="<keybind key=\"$1\"><action name=\"Execute\"><command>$2</command></action></keybind>"
+    grep -qF "$linha" "$RC" && return 0
+    # tira o atalho que o Openbox já trazia para essa tecla (ex.: Print -> scrot, que não está instalado)
+    perl -0pi -e "s#[ \\t]*<keybind key=\"$1\">.*?</keybind>\\n?##s" "$RC"
+    sed -i "s|</keyboard>|  $linha\n</keyboard>|" "$RC"
   }
   add_key C-A-t qterminal
   add_key C-A-f firefox-esr

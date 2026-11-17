@@ -26,6 +26,11 @@ S
   <desktops><number>4</number><firstdesk>1</firstdesk></desktops>
   <keyboard>
     <keybind key="A-F4"><action name="Close"/></keybind>
+    <keybind key="Print">
+      <action name="Execute">
+        <command>scrot</command>
+      </action>
+    </keybind>
   </keyboard>
 </openbox_config>
 X
@@ -408,6 +413,15 @@ S
   run_visual
   run_visual
   [ "$(grep -c '^hide-user-image=' "$ROOT_PREFIX/etc/lightdm/lightdm-gtk-greeter.conf")" -eq 1 ]
+}
+
+@test "o Print padrão do Openbox (scrot) é trocado pelo screengrab, sem duplicar" {
+  run_visual
+  run_visual
+  rc="$HOME/.config/openbox/rc.xml"
+  ! grep -q 'scrot' "$rc"
+  [ "$(grep -c 'key="Print"' "$rc")" -eq 1 ]
+  grep -q '<keybind key="Print"><action name="Execute"><command>screengrab -r</command>' "$rc"
 }
 
 @test "botões da janela estilo Mac: vermelho, amarelo e verde à esquerda" {
