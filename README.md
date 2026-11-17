@@ -64,7 +64,7 @@ Para atualizar um sistema que já está instalado: `git pull`, depois `./add bas
 
 **Fundo:** a área de trabalho e a tela de login ficam pretas; `SO_PROPRIO_FUNDO=tema ./add visual` volta ao degradê do tema.
 
-**Painel do PC e área de trabalho limpa:** o `visual` instala o `so-proprio-painel` (`~/.local/bin`), uma janela leve em Python/Tkinter com gráfico de CPU, barras de RAM, swap, disco e bateria, e o `free -h` completo; só gasta memória enquanto está aberta. Abre pelo ícone na dock (5º item, ao lado de terminal, Firefox, arquivos e VS Code), pelo menu de apps ou com `Ctrl+Alt+M`; `Esc` fecha. Em texto, sem janela: `so-proprio-painel --resumo`. A lixeira sai da área de trabalho (`DesktopShortcuts` do PCManFM-Qt; Home, Computer e Network ficam, e dá para tirar também editando essa linha em `~/.config/pcmanfm-qt/lxqt/settings.conf`).
+**Painel do PC fixo no fundo e área de trabalho limpa:** o `visual` instala o `so-proprio-painel` (`~/.local/bin`) e o inicia sozinho no login (`--fundo`): fica centralizado no fundo da área de trabalho, abaixo das janelas, com os 4 apps clicáveis (Firefox, VS Code, Terminal e Arquivos), gráfico de CPU, barras de RAM, swap, disco e bateria e o `free -h` completo. Não é um app: não tem janela, item na dock nem atalho. Para ver sem relogar: `so-proprio-painel --fundo &`; em texto: `so-proprio-painel --resumo`. Ele substitui o Conky (o autostart antigo é removido e o `./add desktop` não o recria). A área de trabalho fica sem nenhum ícone (lixeira, Home, Computer e Network): o `visual` para o gerenciador da área de trabalho, grava `DesktopShortcuts=` vazio e o religa, senão ele regravaria a config antiga ao sair.
 
 **Janelas e dock:** botões de fechar/minimizar/maximizar estilo Mac (bolinhas vermelha, amarela e verde, à direita; sem o nome da janela na barra de título); só a dock de baixo é flutuante, arredondada e só com ícones (a barra de cima é reta); o botão do menu usa o asterisco do nofio (precisa do `picom`, instalado pelo `visual`); o `visual` também coloca o usuário no grupo `video` para as teclas de brilho funcionarem (vale após logout e login).
 
@@ -91,7 +91,7 @@ O histórico de execuções fica em `~/.local/state/so-proprio/add.log`.
 
 ## Medir
 
-O Conky já mostra `free -h` e `systemd-analyze` no fundo da tela. Para mudar posição, cores ou o que aparece, edite `~/.config/conky/conky.conf` (o `./add desktop` não sobrescreve suas mudanças).
+O `./add visual` troca o Conky pelo painel de fundo (veja Painel do PC). Quem quiser o Conky de volta: apague `~/.config/so-proprio/sem-conky` e rode `./add desktop`; a config fica em `~/.config/conky/conky.conf`.
 
 
 Compare antes (Ubuntu antigo) e depois:
@@ -113,3 +113,7 @@ sudo apt install -y bats shellcheck
 bats tests/
 shellcheck -x add lib/*.sh tuning/*.sh grupos/*.sh
 ```
+
+## Firefox limpo e abertura mais rápida
+
+O grupo `navegador` deixa o Firefox abrindo em branco, sem restaurar abas, sem cache em disco e sem sondas de rede na partida. Em perfis existentes grava um `user.js` (ganha do `prefs.js` antigo) e apaga a sessão salva e o `cache2`; favoritos, senhas e extensões não são tocados. Com o Firefox aberto a limpeza de arquivos é pulada (feche e rode `./add navegador` de novo). Se ainda demorar muito: meça com `time firefox-esr --new-instance about:blank`, compare com `firefox-esr --safe-mode` (se for bem mais rápido, o culpado é extensão) e lembre que o HD mecânico paga a primeira abertura do dia, enquanto as seguintes saem do cache de arquivos do kernel.

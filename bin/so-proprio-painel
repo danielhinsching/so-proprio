@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Painel do PC (so-proprio): RAM, CPU, disco, bateria e o `free -h`, em gráficos simples.
 
-Só gasta memória enquanto estiver aberto. Usa o tema salvo em ~/.config/so-proprio/tema.
+Usa pouca memória. Usa o tema salvo em ~/.config/so-proprio/tema.
   so-proprio-painel            abre a janela
+  so-proprio-painel --fundo    fixo no fundo da área de trabalho, com os apps
   so-proprio-painel --resumo   imprime os números em texto (sem tela)
 """
 import os
@@ -124,6 +125,14 @@ def resumo():
     return "\n".join(linhas)
 
 
+APPS = [
+    ("firefox", "Firefox", ["firefox-esr"]),
+    ("code", "VS Code", ["code"]),
+    ("terminal", "Terminal", ["qterminal"]),
+    ("arquivos", "Arquivos", ["pcmanfm-qt"]),
+]
+
+
 def paleta():
     try:
         with open(os.path.expanduser("~/.config/so-proprio/tema")) as f:
@@ -137,12 +146,14 @@ def paleta():
                 ok="#30d158", aviso="#ff9f0a", ruim="#ff453a", destaque="#0a84ff")
 
 
-def abrir_janela(so_testar=False):
+def abrir_janela(so_testar=False, fundo=False):
     import tkinter as tk
 
     c = paleta()
     raiz = tk.Tk()
     raiz.title("Painel do PC")
+    if fundo:
+        c["fundo"] = "#000000"  # combina com o papel de parede preto
     raiz.configure(bg=c["fundo"])
     raiz.resizable(False, False)
     fonte = ("Inter", 10)
@@ -167,11 +178,38 @@ def abrir_janela(so_testar=False):
         tela.pack(fill="x", pady=(8, 0))
         cartoes[chave] = (valor, tela)
 
-    cab = tk.Frame(raiz, bg=c["fundo"])
-    cab.pack(fill="x", padx=16, pady=(14, 10))
-    tk.Label(cab, text="Painel do PC", bg=c["fundo"], fg=c["texto"], font=("Inter", 15, "bold")).pack(side="left")
-    info = tk.Label(cab, text="", bg=c["fundo"], fg=c["suave"], font=fonte)
-    info.pack(side="right")
+    if fundo:
+        # Fileira de apps (clicáveis): Firefox, VS Code, terminal e arquivos.
+        fila = tk.Frame(raiz, bg=c["fundo"])
+        fila.pack(pady=(14, 14))
+        pasta = os.path.expanduser("~/.local/share/so-proprio/icones")
+        imagens = []
+        for chave, nome, cmd in APPS:
+            item = tk.Frame(fila, bg=c["fundo"], cursor="hand2", padx=18)
+            item.pack(side="left")
+            try:
+                img = tk.PhotoImage(file=os.path.join(pasta, chave + ".png"))
+                imagens.append(img)
+                topo_item = tk.Label(item, image=img, bg=c["fundo"])
+            except tk.TclError:
+                topo_item = tk.Label(item, text=nome[:1], bg=c["cartao"], fg=c["texto"], font=("Inter", 22, "bold"),
+                                     width=3, height=1)
+            topo_item.pack()
+            legenda = tk.Label(item, text=nome, bg=c["fundo"], fg=c["suave"], font=fonte)
+            legenda.pack(pady=(4, 0))
+            for w in (item, topo_item, legenda):
+                w.bind("<Button-1>", lambda _e, k=cmd: subprocess.Popen(k, start_new_session=True,
+                                                                       stdout=subprocess.DEVNULL,
+                                                                       stderr=subprocess.DEVNULL))
+        raiz.imagens = imagens
+        info = tk.Label(raiz, text="", bg=c["fundo"], fg=c["suave"], font=fonte)
+        info.pack(pady=(0, 8))
+    else:
+        cab = tk.Frame(raiz, bg=c["fundo"])
+        cab.pack(fill="x", padx=16, pady=(14, 10))
+        tk.Label(cab, text="Painel do PC", bg=c["fundo"], fg=c["texto"], font=("Inter", 15, "bold")).pack(side="left")
+        info = tk.Label(cab, text="", bg=c["fundo"], fg=c["suave"], font=fonte)
+        info.pack(side="right")
 
     cartao("cpu", "CPU", 70)
     cartao("ram", "Memória RAM", 12)
@@ -236,7 +274,8 @@ def abrir_janela(so_testar=False):
         atualizar()
         raiz.after(2000, ciclo)
 
-    raiz.bind("<Escape>", lambda _e: raiz.destroy())
+    if not fundo:
+        raiz.bind("<Escape>", lambda _e: raiz.destroy())
     if so_testar:
         time.sleep(0.2)
         atualizar()
@@ -248,6 +287,15 @@ def abrir_janela(so_testar=False):
     x = (raiz.winfo_screenwidth() - raiz.winfo_reqwidth()) // 2
     y = max(0, (raiz.winfo_screenheight() - raiz.winfo_reqheight()) // 3)
     raiz.geometry(f"+{x}+{y}")
+    if fundo:
+        # Tipo "desktop": sem moldura, abaixo de todas as janelas, como o Conky.
+        try:
+            raiz.attributes("-type", "desktop")
+        except tk.TclError:
+            raiz.overrideredirect(True)
+            raiz.lower()
+        y = max(0, (raiz.winfo_screenheight() - raiz.winfo_reqheight()) // 2)
+        raiz.geometry(f"+{x}+{y}")
     ciclo()
     raiz.mainloop()
 
@@ -256,6 +304,6 @@ if __name__ == "__main__":
     if "--resumo" in sys.argv:
         print(resumo())
     elif "--teste-gui" in sys.argv:
-        abrir_janela(so_testar=True)
+        abrir_janela(so_testar=True, fundo="--fundo" in sys.argv)
     else:
-        abrir_janela()
+        abrir_janela(fundo="--fundo" in sys.argv)

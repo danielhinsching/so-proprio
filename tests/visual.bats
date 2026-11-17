@@ -395,7 +395,7 @@ S
   mkdir -p "$HOME/.config/lxqt"
   printf '[General]\nso_proprio=1\n[panel1]\nhidable=false\n' > "$(panel_conf)"
   run_visual
-  grep -qx 'so_proprio=5' "$(panel_conf)"
+  grep -qx 'so_proprio=6' "$(panel_conf)"
   awk '/^\[panel1\]/{p=1;next} /^\[/{p=0} p' "$(panel_conf)" | grep -qx 'hidable=true'
 }
 
@@ -591,7 +591,7 @@ S
   awk '/^\[panel1\]/{p=1;next} /^\[/{p=0} p' "$c" | grep -qx 'iconSize=24'
   awk '/^\[panel2\]/{p=1;next} /^\[/{p=0} p' "$c" | grep -qx 'panelSize=26'
   awk '/^\[panel2\]/{p=1;next} /^\[/{p=0} p' "$c" | grep -qx 'iconSize=16'
-  grep -qx 'so_proprio=5' "$c"
+  grep -qx 'so_proprio=6' "$c"
 }
 
 @test "o tema próprio do LXQt é cópia do base e tira a moldura dos botões do painel" {
@@ -628,11 +628,26 @@ painel_python() { # um python que tenha tkinter (o do sistema); vazio se nenhum
   done
 }
 
-@test "a lixeira sai da área de trabalho (PCManFM-Qt: DesktopShortcuts sem Trash)" {
+@test "a área de trabalho fica sem ícones (lixeira, Home, Computer, Network): DesktopShortcuts vazio" {
   run_visual
   s="$HOME/.config/pcmanfm-qt/lxqt/settings.conf"
-  awk '/^\[Desktop\]/{p=1;next} /^\[/{p=0} p' "$s" | grep -qx 'DesktopShortcuts=Home, Computer, Network'
+  awk '/^\[Desktop\]/{p=1;next} /^\[/{p=0} p' "$s" | grep -qx 'DesktopShortcuts='
   ! grep -qi 'trash' "$s"
+}
+
+@test "o gerenciador da área de trabalho é parado antes de editar o settings.conf e religado depois" {
+  printf '#!/usr/bin/env bash\necho "$@" >> "%s/pcmanfm.log"\n' "$TMP" > "$TMP/pcmanfm-stub"
+  chmod +x "$TMP/pcmanfm-stub"
+  SO_PROPRIO_PCMANFM="$TMP/pcmanfm-stub" SO_PROPRIO_PCMANFM_RODANDO=1 run_visual
+  [ "$(sed -n 1p "$TMP/pcmanfm.log")" = "--desktop-off --profile=lxqt" ]
+  [ "$(sed -n 2p "$TMP/pcmanfm.log")" = "--desktop --profile=lxqt" ]
+}
+
+@test "sem o gerenciador da área de trabalho rodando, ele não é mexido" {
+  printf '#!/usr/bin/env bash\necho "$@" >> "%s/pcmanfm.log"\n' "$TMP" > "$TMP/pcmanfm-stub"
+  chmod +x "$TMP/pcmanfm-stub"
+  SO_PROPRIO_PCMANFM="$TMP/pcmanfm-stub" SO_PROPRIO_PCMANFM_RODANDO=0 run_visual
+  [ ! -e "$TMP/pcmanfm.log" ]
 }
 
 @test "painel do PC: --resumo mostra RAM, swap, disco, CPU e o free -h, sem precisar de tela" {
@@ -652,23 +667,48 @@ painel_python() { # um python que tenha tkinter (o do sistema); vazio se nenhum
   run xvfb-run -a "$py" "$REPO/bin/so-proprio-painel" --teste-gui
   [ "$status" -eq 0 ]
   [ "$output" = "gui ok" ]
+  run xvfb-run -a "$py" "$REPO/bin/so-proprio-painel" --teste-gui --fundo
+  [ "$status" -eq 0 ]
+  [ "$output" = "gui ok" ]
 }
 
-@test "o visual instala o painel do PC, o atalho de app, o atalho Ctrl+Alt+M e o item na dock" {
+@test "o painel do PC fica fixo no fundo da área de trabalho (autostart em modo --fundo), sem app, atalho nem item na dock" {
   run_visual
   b="$HOME/.local/bin/so-proprio-painel"
   [ -x "$b" ]
   cmp "$b" "$REPO/bin/so-proprio-painel"
-  d="$HOME/.local/share/applications/so-proprio-painel.desktop"
-  grep -qx 'Name=Painel do PC' "$d"
-  grep -qx "Exec=$b" "$d"
-  grep -qx 'Icon=utilities-system-monitor' "$d"
-  grep -q "<keybind key=\"C-A-m\"><action name=\"Execute\"><command>$b</command>" "$HOME/.config/openbox/rc.xml"
-  c="$(panel_conf)"
-  awk '/^\[quicklaunch\]/{p=1;next} /^\[/{p=0} p' "$c" | grep -qxF "apps\\5\\desktop=$d"
-  awk '/^\[quicklaunch\]/{p=1;next} /^\[/{p=0} p' "$c" | grep -qxF 'apps\size=5'
+  a="$HOME/.config/autostart/so-proprio-fundo.desktop"
+  grep -qx "Exec=sh -c \"sleep 6; exec $b --fundo\"" "$a"
+  [ ! -e "$HOME/.local/share/applications/so-proprio-painel.desktop" ]
+  ! grep -q 'key="C-A-m"' "$HOME/.config/openbox/rc.xml"
+  awk '/^\[quicklaunch\]/{p=1;next} /^\[/{p=0} p' "$(panel_conf)" | grep -qxF 'apps\size=4'
+  ! grep -q 'so-proprio-painel' "$(panel_conf)"
 }
 
-@test "python3-tk está nos pacotes do grupo visual" {
+@test "o painel de fundo substitui o Conky: autostart removido e lembrado para o ./add desktop" {
+  mkdir -p "$HOME/.config/autostart"
+  echo "[Desktop Entry]" > "$HOME/.config/autostart/conky-so-proprio.desktop"
+  run_visual
+  [ ! -e "$HOME/.config/autostart/conky-so-proprio.desktop" ]
+  [ -e "$HOME/.config/so-proprio/sem-conky" ]
+  grep -q 'sem-conky' "$REPO/grupos/desktop.sh"
+}
+
+@test "os ícones dos 4 apps do painel viram PNG (Papirus -> rsvg-convert)" {
+  command -v rsvg-convert >/dev/null || skip "sem rsvg-convert"
+  src="$TMP/papirus/64x64/apps"
+  mkdir -p "$src"
+  for n in firefox-esr vscode utilities-terminal system-file-manager; do
+    printf '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><circle cx="32" cy="32" r="30" fill="#0a84ff"/></svg>' > "$src/$n.svg"
+  done
+  SO_PROPRIO_ICONES_SRC="$TMP/papirus/64x64/apps" run_visual
+  for i in firefox code terminal arquivos; do
+    f="$HOME/.local/share/so-proprio/icones/$i.png"
+    [ "$(head -c 8 "$f" | od -An -tx1 | tr -d ' \n')" = "89504e470d0a1a0a" ]
+  done
+}
+
+@test "python3-tk e librsvg2-bin estão nos pacotes do grupo visual" {
   grep -q '^python3-tk' "$REPO/grupos/visual.txt"
+  grep -q '^librsvg2-bin' "$REPO/grupos/visual.txt"
 }

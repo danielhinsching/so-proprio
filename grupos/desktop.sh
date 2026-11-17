@@ -29,7 +29,7 @@ else
 fi
 
 AUTOSTART="$HOME/.config/autostart/conky-so-proprio.desktop"
-if [ ! -f "$AUTOSTART" ]; then
+if [ ! -f "$AUTOSTART" ] && [ ! -e "$HOME/.config/so-proprio/sem-conky" ]; then
   mkdir -p "$(dirname "$AUTOSTART")"
   cat > "$AUTOSTART" <<'DESKTOP'
 [Desktop Entry]

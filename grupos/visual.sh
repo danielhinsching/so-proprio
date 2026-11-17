@@ -2,7 +2,7 @@
 # Visual do desktop: tema escuro, painel (dock central + barra de status),
 # uma única área de trabalho e atalhos de teclado no Openbox.
 # Não sobrescreve o que você já editou: o painel só é regerado se faltar a marca
-# so_proprio=5 (ou com SO_PROPRIO_VISUAL_FORCE=1); o rc.xml do Openbox só ganha o que falta.
+# so_proprio=6 (ou com SO_PROPRIO_VISUAL_FORCE=1); o rc.xml do Openbox só ganha o que falta.
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -107,10 +107,27 @@ mkdir -p "$(dirname "$WALL")"
 # Fundo preto por padrão; SO_PROPRIO_FUNDO=tema usa o degradê do tema claro/escuro.
 FUNDO=preto; [ "${SO_PROPRIO_FUNDO:-preto}" = tema ] && FUNDO="$MODE"
 cp "$REPO_DIR/dotfiles/wallpaper/$FUNDO.png" "$WALL"
+# O PCManFM-Qt (gerenciador da área de trabalho) reescreve o settings.conf ao fechar; por isso ele é
+# parado ANTES de editar e religado DEPOIS, senão a configuração antiga voltaria no logout.
+PCMANFM="${SO_PROPRIO_PCMANFM:-pcmanfm-qt}"
+if [ -n "${SO_PROPRIO_PCMANFM_RODANDO:-}" ]; then
+  PCMAN_RODANDO="$SO_PROPRIO_PCMANFM_RODANDO"
+elif pgrep -f 'pcmanfm-qt --desktop' >/dev/null 2>&1; then
+  PCMAN_RODANDO=1
+else
+  PCMAN_RODANDO=0
+fi
+if [ "$PCMAN_RODANDO" = 1 ]; then
+  "$PCMANFM" --desktop-off --profile=lxqt >/dev/null 2>&1 || true
+  sleep "${SO_PROPRIO_ESPERA:-1}"
+fi
 ini_set "$HOME/.config/pcmanfm-qt/lxqt/settings.conf" Desktop Wallpaper "$WALL"
 ini_set "$HOME/.config/pcmanfm-qt/lxqt/settings.conf" Desktop WallpaperMode zoom
-# Área de trabalho limpa: sem a lixeira (Home, Computer e Network continuam; edite DesktopShortcuts para tirar mais).
-ini_set "$HOME/.config/pcmanfm-qt/lxqt/settings.conf" Desktop DesktopShortcuts "Home, Computer, Network"
+# Área de trabalho sem ícones: nem lixeira, nem Home, Computer ou Network.
+ini_set "$HOME/.config/pcmanfm-qt/lxqt/settings.conf" Desktop DesktopShortcuts ""
+if [ "$PCMAN_RODANDO" = 1 ]; then
+  nohup "$PCMANFM" --desktop --profile=lxqt >/dev/null 2>&1 &
+fi
 echo "Aparência: tema $MODE, ícones $ICONS, fonte Inter, papel de parede novo."
 
 # --- Tema das janelas do Openbox (SoProprio): plano, sem bordas pesadas ---
@@ -315,21 +332,33 @@ GTKCSS
 rm -f "$GREETER_TMP"
 echo "Login: tela escura, sem foto de perfil e sem botões (digite a senha e Enter). Vale no próximo logout/reinício."
 
-# --- Painel do PC: RAM, CPU, disco, bateria e free -h em gráficos (abre pelo menu, pela dock ou Ctrl+Alt+M) ---
+# --- Painel do PC fixo no fundo da área de trabalho (centralizado): apps + RAM, CPU, disco, bateria e free -h ---
 PAINEL_BIN="$HOME/.local/bin/so-proprio-painel"
-PAINEL_DESKTOP="$HOME/.local/share/applications/so-proprio-painel.desktop"
-mkdir -p "$HOME/.local/bin" "$HOME/.local/share/applications"
+mkdir -p "$HOME/.local/bin" "$HOME/.config/autostart"
 install -m 0755 "$REPO_DIR/bin/so-proprio-painel" "$PAINEL_BIN"
-cat > "$PAINEL_DESKTOP" <<DESKTOP
+rm -f "$HOME/.local/share/applications/so-proprio-painel.desktop"
+cat > "$HOME/.config/autostart/so-proprio-fundo.desktop" <<DESKTOP
 [Desktop Entry]
 Type=Application
-Name=Painel do PC
-Comment=RAM, CPU, disco, bateria e free -h em gráficos
-Exec=$PAINEL_BIN
-Icon=utilities-system-monitor
-Categories=System;Monitor;
-Terminal=false
+Name=Painel do PC (so-proprio)
+Comment=Apps e gráficos de RAM, CPU e disco no fundo da área de trabalho
+Exec=sh -c "sleep 6; exec $PAINEL_BIN --fundo"
 DESKTOP
+# Ele substitui o Conky (que ficava no canto): remove o autostart e lembra isso para o ./add desktop.
+mkdir -p "$HOME/.config/so-proprio"
+touch "$HOME/.config/so-proprio/sem-conky"
+rm -f "$HOME/.config/autostart/conky-so-proprio.desktop"
+# Ícones dos 4 apps do painel: SVG do Papirus -> PNG (o Tk lê PNG).
+ICONES_SRC="${SO_PROPRIO_ICONES_SRC:-/usr/share/icons/Papirus/64x64/apps}"
+ICONES_DST="$HOME/.local/share/so-proprio/icones"
+mkdir -p "$ICONES_DST"
+if command -v rsvg-convert >/dev/null 2>&1; then
+  for par in firefox:firefox-esr code:vscode terminal:utilities-terminal arquivos:system-file-manager; do
+    destino="${par%%:*}"; origem="$ICONES_SRC/${par#*:}.svg"
+    [ -f "$origem" ] && rsvg-convert -w 64 -h 64 "$origem" -o "$ICONES_DST/$destino.png"
+  done
+fi
+echo "Painel do PC: fixo no fundo da área de trabalho, aparece no próximo login (ou: so-proprio-painel --fundo &)."
 
 # --- Compositor leve (picom): cantos arredondados e transparentes da dock ---
 mkdir -p "$HOME/.config/picom"
@@ -370,7 +399,7 @@ if ! printf '%s\n' "$GRUPOS_USUARIO" | tr ' ' '\n' | grep -qx video; then
 fi
 
 # --- Painel ---
-if [ -f "$PANEL" ] && grep -qx 'so_proprio=5' "$PANEL" && [ "${SO_PROPRIO_VISUAL_FORCE:-0}" != "1" ]; then
+if [ -f "$PANEL" ] && grep -qx 'so_proprio=6' "$PANEL" && [ "${SO_PROPRIO_VISUAL_FORCE:-0}" != "1" ]; then
   echo "Painel: já configurado pelo so-proprio, mantido (SO_PROPRIO_VISUAL_FORCE=1 para regerar)."
 else
   mkdir -p "$LXQT_DIR"
@@ -381,7 +410,7 @@ else
 [General]
 __userfile__=true
 panels=panel1, panel2
-so_proprio=5
+so_proprio=6
 
 [panel1]
 alignment=0
@@ -433,8 +462,7 @@ apps\1\desktop=/usr/share/applications/firefox-esr.desktop
 apps\2\desktop=/usr/share/applications/code.desktop
 apps\3\desktop=/usr/share/applications/qterminal.desktop
 apps\4\desktop=/usr/share/applications/pcmanfm-qt.desktop
-apps\5\desktop=__HOME__/.local/share/applications/so-proprio-painel.desktop
-apps\size=5
+apps\size=4
 type=quicklaunch
 
 [taskbar]
@@ -463,7 +491,6 @@ type=volume
 alignment=Right
 type=worldclock
 CONF
-sed -i "s|__HOME__|$HOME|g" "$PANEL"
   echo "Painel: dock central embaixo (menu, apps, janelas) e barra em cima (rede, Bluetooth, bateria, volume, hora)."
   echo "Faça logout e login para o painel novo aparecer."
 fi
@@ -496,7 +523,6 @@ if [ -f "$RC" ]; then
   add_key C-A-t qterminal
   add_key C-A-f firefox-esr
   add_key C-A-c code
-  add_key C-A-m "$PAINEL_BIN"
   add_key W-l light-locker-command\ -l
   add_key Print screengrab\ -r
   add_key S-Print screengrab\ -f
