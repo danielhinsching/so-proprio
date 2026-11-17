@@ -13,8 +13,14 @@ source "$REPO_DIR/lib/ini.sh"
 LXQT_DIR="$HOME/.config/lxqt"
 PANEL="$LXQT_DIR/panel.conf"
 
-# --- Aparência: claro (padrão) ou escuro, com SO_PROPRIO_TEMA=escuro ---
-if [ "${SO_PROPRIO_TEMA:-claro}" = "escuro" ]; then
+# --- Aparência: escuro (padrão) ou claro, com SO_PROPRIO_TEMA=claro ---
+# A escolha fica salva em ~/.config/so-proprio/tema e vale nas próximas execuções.
+TEMA_SALVO="$HOME/.config/so-proprio/tema"
+TEMA="${SO_PROPRIO_TEMA:-$(cat "$TEMA_SALVO" 2>/dev/null || true)}"
+[ "$TEMA" = "claro" ] || TEMA=escuro
+mkdir -p "$(dirname "$TEMA_SALVO")"
+echo "$TEMA" > "$TEMA_SALVO"
+if [ "$TEMA" = "escuro" ]; then
   MODE=escuro; LXQT_THEME=dark; ICONS=Papirus-Dark; PREFER_DARK=true
   BG='#1c1c1e'; BG_INACTIVE='#2c2c2e'; TEXT='#f5f5f7'; SUBTLE='#8e8e93'; MAC_INATIVO='#48484a'
   BORDER='#3a3a3c'; HOVER='#3a3a3c'; PRESSED='#48484a'; MENU='#2c2c2e'

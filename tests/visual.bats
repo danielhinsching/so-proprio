@@ -8,6 +8,7 @@ setup() {
   mkdir -p "$HOME"
   export ROOT_PREFIX="$TMP/root"
   mkdir -p "$ROOT_PREFIX/etc"
+  export SO_PROPRIO_TEMA=claro   # os testes partem do claro; o padrão real é escuro (testado à parte)
   # systemctl falso: registra a chamada e finge que a unidade existe
   cat > "$TMP/systemctl" <<'S'
 #!/usr/bin/env bash
@@ -136,6 +137,24 @@ panel_conf() { echo "$HOME/.config/lxqt/panel.conf"; }
   sed 's/Clearlooks/Onyx/' "$OPENBOX_DEFAULT_RC" > "$HOME/.config/openbox/rc.xml"
   run_visual
   grep -q '<name>SoProprio</name>' "$HOME/.config/openbox/rc.xml"
+}
+
+@test "sem nada configurado, o tema padrão é o escuro" {
+  unset SO_PROPRIO_TEMA
+  run_visual
+  awk '/^\[General\]/{p=1;next} /^\[/{p=0} p' "$HOME/.config/lxqt/lxqt.conf" | grep -qx 'theme=so-proprio-escuro'
+  grep -q '^window.active.title.bg.color: #1c1c1e' "$HOME/.themes/SoProprio/openbox-3/themerc"
+}
+
+@test "o tema escolhido é lembrado: rodar ./add visual de novo não volta ao claro" {
+  SO_PROPRIO_TEMA=claro run_visual
+  unset SO_PROPRIO_TEMA
+  run_visual
+  awk '/^\[General\]/{p=1;next} /^\[/{p=0} p' "$HOME/.config/lxqt/lxqt.conf" | grep -qx 'theme=so-proprio-claro'
+  SO_PROPRIO_TEMA=escuro run_visual
+  unset SO_PROPRIO_TEMA
+  run_visual
+  awk '/^\[General\]/{p=1;next} /^\[/{p=0} p' "$HOME/.config/lxqt/lxqt.conf" | grep -qx 'theme=so-proprio-escuro'
 }
 
 @test "SO_PROPRIO_TEMA=escuro usa a paleta escura em tudo" {

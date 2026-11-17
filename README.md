@@ -70,7 +70,7 @@ Para atualizar um sistema que já está instalado: `git pull`, depois `./add bas
 
 **Teclas e extras do `visual`:** Super+L bloqueia a tela (light-locker, pelo LightDM); Print ou Ctrl+Alt+P captura a tela (ScreenGrab, seleção de área); teclas de brilho (`brightnessctl`) e de volume (`wpctl`) funcionam; a bateria usa o `cbatticon` (o ícone do LXQt é um gráfico de pizza); o touchpad usa rolagem invertida e toque para clicar (vale no próximo login); a dock de baixo se esconde e aparece ao encostar o mouse na borda; VS Code e Firefox são lidos para a memória 20 s depois do login, para abrirem rápido no HD.
 
-**Tema claro ou escuro:** o padrão é claro. Para o escuro: `SO_PROPRIO_TEMA=escuro ./add visual` (volte com `./add visual`). Isso troca tema do LXQt, ícones, janelas do Openbox, apps GTK e papel de parede de uma vez. O Conky tem fundo escuro fixo; edite `~/.config/conky/conky.conf` se quiser outra cor.
+**Tema claro ou escuro:** o padrão é escuro. Para o claro: `SO_PROPRIO_TEMA=claro ./add visual`; a escolha fica salva em `~/.config/so-proprio/tema` e vale nas próximas execuções (volte com `SO_PROPRIO_TEMA=escuro ./add visual`). Isso troca tema do LXQt, ícones, janelas do Openbox, apps GTK e papel de parede de uma vez. O Conky tem fundo escuro fixo; edite `~/.config/conky/conky.conf` se quiser outra cor.
 
 **Ícones sem moldura:** o `visual` cria o tema `so-proprio-claro`/`so-proprio-escuro` (cópia do tema base do LXQt com os botões do painel sem borda), e os painéis ficam menores (dock 36 px, barra 26 px). Para mudar tamanhos, edite `~/.config/lxqt/panel.conf` (`panelSize` e `iconSize`).
 
