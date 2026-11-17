@@ -23,7 +23,28 @@ S
   cat > "$TMP/xdg/openbox/rc.xml" <<'X'
 <?xml version="1.0" encoding="UTF-8"?>
 <openbox_config xmlns="http://openbox.org/3.4/rc">
-  <theme><name>Clearlooks</name><titleLayout>NLIMC</titleLayout></theme>
+  <theme>
+    <name>Clearlooks</name>
+    <titleLayout>NLIMC</titleLayout>
+    <font place="ActiveWindow">
+      <name>sans</name>
+      <size>8</size>
+      <weight>Bold</weight>
+      <slant>normal</slant>
+    </font>
+    <font place="InactiveWindow">
+      <name>sans</name>
+      <size>8</size>
+      <weight>Bold</weight>
+      <slant>normal</slant>
+    </font>
+    <font place="MenuItem">
+      <name>sans</name>
+      <size>8</size>
+      <weight>Normal</weight>
+      <slant>normal</slant>
+    </font>
+  </theme>
   <desktops><number>4</number><firstdesk>1</firstdesk></desktops>
   <keyboard>
     <keybind key="A-F4"><action name="Close"/></keybind>
@@ -538,6 +559,21 @@ S
   awk '/^LXQtPanel\[position="Bottom"\] #BackgroundWidget \{/{p=1;next} /^\}/{p=0} p' "$q" | grep -q 'border-radius: 16px'
   ! grep -q '^LXQtPanel #BackgroundWidget' "$q"
   awk '/^LXQtPanel\[position="Top"\] #BackgroundWidget \{/{p=1;next} /^\}/{p=0} p' "$q" | grep -q 'border-radius: 0px'
+}
+
+@test "a barra de título tem altura para a bolinha inteira (fonte 12 no Openbox, sem cortar)" {
+  run_visual
+  run_visual
+  rc="$HOME/.config/openbox/rc.xml"
+  for p in ActiveWindow InactiveWindow; do
+    b="$(awk -v p="$p" '$0 ~ "<font place=\"" p "\">"{f=1} f{print} f&&/<\/font>/{exit}' "$rc")"
+    echo "$b" | grep -q '<name>Inter</name>'
+    echo "$b" | grep -q '<size>12</size>'
+    echo "$b" | grep -q '<weight>Normal</weight>'
+  done
+  # outras fontes (menu) não são mexidas
+  awk '/<font place="MenuItem">/{f=1} f{print} f&&/<\/font>/{exit}' "$rc" | grep -q '<name>sans</name>'
+  grep -qx 'padding.height: 4' "$HOME/.themes/SoProprio/openbox-3/themerc"
 }
 
 @test "as bolinhas dos botões são 14x14 e redondas" {

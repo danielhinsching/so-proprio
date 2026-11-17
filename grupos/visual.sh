@@ -118,7 +118,7 @@ mkdir -p "$OB_THEME"
   cat <<THEME
 border.width: 1
 padding.width: 10
-padding.height: 8
+padding.height: 4
 window.handle.width: 0
 window.client.padding.width: 0
 menu.overlap: 0
@@ -469,6 +469,10 @@ if [ -f "$RC" ]; then
     perl -0pi -e "s#[ \\t]*<keybind key=\"$1\">.*?</keybind>\\n?##s" "$RC"
     sed -i "s|</keyboard>|  $linha\n</keyboard>|" "$RC"
   }
+  # Fonte da barra de título maior: o botão (bolinha 14 px) só cabe inteiro com altura de título suficiente.
+  for lugar in ActiveWindow InactiveWindow; do
+    perl -0pi -e "s#(<font place=\"$lugar\">\\s*<name>)[^<]*(</name>\\s*<size>)[^<]*(</size>\\s*<weight>)[^<]*(</weight>)#\${1}Inter\${2}12\${3}Normal\${4}#s" "$RC"
+  done
   add_key C-A-t qterminal
   add_key C-A-f firefox-esr
   add_key C-A-c code
