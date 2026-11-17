@@ -32,7 +32,8 @@ PY
 0x02 -1 lxqt-panel.lxqt-panel  fusca lxqt-panel
 0x03 0  so-proprio-painel.So-proprio-painel fusca Painel
 0x04 0  so-proprio-dock.so-proprio-dock fusca dock
-0x05 1  qterminal.qterminal fusca daniel@fusca: ~'
+0x05 1  qterminal.qterminal fusca daniel@fusca: ~
+0x06 0  Navigator.firefox-esr fusca Google — Firefox'
   r="$(python3 -I - "$DOCK" "$saida" <<'PY'
 import sys, importlib.machinery, importlib.util
 l = importlib.machinery.SourceFileLoader("dock", sys.argv[1])
@@ -40,7 +41,7 @@ s = importlib.util.spec_from_loader("dock", l); m = importlib.util.module_from_s
 print([(i, c) for i, c, _t in m.janelas(sys.argv[2])])
 PY
 )"
-  [ "$r" = "[('0x01', 'firefox-esr'), ('0x05', 'qterminal')]" ]
+  [ "$r" = "[('0x01', 'firefox-esr'), ('0x05', 'qterminal'), ('0x06', 'firefox-esr')]" ]
 }
 
 @test "ícone por classe: Firefox, VS Code, terminal e arquivos têm nome de ícone do tema" {
@@ -58,4 +59,26 @@ PY
   run xvfb-run -a "$PY" "$DOCK" --teste-gui
   [ "$status" -eq 0 ]
   [ "$output" = "dock ok" ]
+}
+
+@test "ícone vem do .desktop do app (StartupWMClass ou nome do executável), com o tema de ícones do usuário" {
+  mkdir -p "$BATS_TEST_TMPDIR/apps"
+  printf '[Desktop Entry]\nName=Firefox\nExec=firefox-esr %%u\nIcon=firefox-esr\nStartupWMClass=firefox-esr\n' > "$BATS_TEST_TMPDIR/apps/firefox-esr.desktop"
+  printf '[Desktop Entry]\nName=QTerminal\nExec=qterminal\nIcon=qterminal\n' > "$BATS_TEST_TMPDIR/apps/qterminal.desktop"
+  [ "$(SO_PROPRIO_APPS_DIR="$BATS_TEST_TMPDIR/apps" logica 'dock.icone_do_desktop("firefox-esr")')" = "firefox-esr" ]
+  [ "$(SO_PROPRIO_APPS_DIR="$BATS_TEST_TMPDIR/apps" logica 'dock.icone_do_desktop("QTerminal")')" = "qterminal" ]
+  [ "$(SO_PROPRIO_APPS_DIR="$BATS_TEST_TMPDIR/apps" logica 'dock.icone_do_desktop("nada")')" = "None" ]
+  mkdir -p "$BATS_TEST_TMPDIR/h/.config/lxqt"; printf '[General]\nicon_theme=Papirus-Dark\n' > "$BATS_TEST_TMPDIR/h/.config/lxqt/lxqt.conf"
+  [ "$(HOME="$BATS_TEST_TMPDIR/h" logica 'dock.tema_de_icones()')" = "Papirus-Dark" ]
+}
+
+@test "a dock se esconde sozinha: some até uma faixa fina e volta quando o mouse chega na borda" {
+  [ "$(logica 'dock.FAIXA')" -le 4 ]
+  [ "$(logica 'dock.ESCONDE_MS')" -gt 0 ]
+  [ -n "$PY" ] || skip "sem python com PyQt5"
+  command -v xvfb-run >/dev/null || skip "sem xvfb-run"
+  export XDG_RUNTIME_DIR="$BATS_TEST_TMPDIR"; chmod 700 "$XDG_RUNTIME_DIR"
+  run xvfb-run -a "$PY" "$DOCK" --teste-esconder
+  [ "$status" -eq 0 ]
+  [ "$output" = "esconder ok" ]
 }

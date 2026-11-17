@@ -5,6 +5,8 @@ Sem nada aberto, só o ícone do menu (asterisco do nofio). Cada app aberto ganh
 ilha cresce ou encolhe junto. Clique no ícone: traz a janela (ou minimiza, se já for a ativa).
   so-proprio-dock              roda a dock
   so-proprio-dock --teste-gui  abre, desenha e fecha (usado nos testes)
+
+A ilha se esconde sozinha (fica só uma faixa fina na borda) e volta quando o mouse chega embaixo.
 """
 import os
 import subprocess
@@ -16,6 +18,8 @@ PAD = 6         # folga entre a borda da ilha e os botões
 ESPACO = 4      # espaço entre botões
 MARGEM = 8      # distância da ilha até a borda de baixo da tela
 RAIO = 16       # arredondamento da ilha
+FAIXA = 3       # pixels que sobram visíveis na borda quando a dock está escondida
+ESCONDE_MS = 900  # tempo com o mouse fora até a dock se esconder
 
 ICONES = {
     "firefox-esr": "firefox-esr", "firefox": "firefox-esr",
@@ -36,6 +40,47 @@ def nome_icone(classe):
     return ICONES.get(c, c)
 
 
+def tema_de_icones():
+    """Tema de ícones escolhido no LXQt (Papirus ou Papirus-Dark); o Qt sozinho só enxerga o hicolor."""
+    try:
+        with open(os.path.expanduser("~/.config/lxqt/lxqt.conf")) as f:
+            for linha in f:
+                if linha.startswith("icon_theme="):
+                    return linha.split("=", 1)[1].strip()
+    except OSError:
+        pass
+    return "Papirus-Dark"
+
+
+def icone_do_desktop(classe):
+    """Ícone do .desktop cujo StartupWMClass ou executável bate com a classe da janela (ou None)."""
+    pasta = os.environ.get("SO_PROPRIO_APPS_DIR", "/usr/share/applications")
+    alvo = classe.lower()
+    try:
+        nomes = sorted(os.listdir(pasta))
+    except OSError:
+        return None
+    for nome in nomes:
+        if not nome.endswith(".desktop"):
+            continue
+        wm = exe = icone = ""
+        try:
+            with open(os.path.join(pasta, nome), errors="replace") as f:
+                for linha in f:
+                    if linha.startswith("StartupWMClass="):
+                        wm = linha.split("=", 1)[1].strip().lower()
+                    elif linha.startswith("Exec=") and not exe:
+                        partes = linha.split("=", 1)[1].split()
+                        exe = os.path.basename(partes[0]).lower() if partes else ""
+                    elif linha.startswith("Icon=") and not icone:
+                        icone = linha.split("=", 1)[1].strip()
+        except OSError:
+            continue
+        if icone and alvo in (wm, exe, nome[:-8].lower()):
+            return icone
+    return None
+
+
 def janelas(saida_wmctrl):
     """Lê `wmctrl -lx` (id desktop instância.Classe host título) e devolve [(id, classe, título)]."""
     achadas = []
@@ -43,11 +88,11 @@ def janelas(saida_wmctrl):
         partes = linha.split(None, 4)
         if len(partes) < 4 or partes[1] == "-1":
             continue
-        wid, completa = partes[0], partes[2]
+        wid, completa = partes[0], partes[2]  # "instância.Classe": vale a Classe (Navigator.firefox-esr)
         if any(x in completa.lower() for x in IGNORAR):
             continue
         titulo = partes[4] if len(partes) > 4 else ""
-        achadas.append((wid, completa.split(".")[0], titulo))
+        achadas.append((wid, completa.split(".")[-1], titulo))
     return achadas
 
 
@@ -73,13 +118,14 @@ def _paleta():
     return dict(fundo=(28, 28, 30, 235), hover=(255, 255, 255, 30), ativo=(255, 255, 255, 52))
 
 
-def rodar(so_testar=False):
+def rodar(so_testar=False, esconder_teste=False):
     from PyQt5.QtCore import QPoint, QRectF, Qt, QTimer
     from PyQt5.QtGui import QColor, QIcon, QPainter, QPainterPath, QPixmap
     from PyQt5.QtWidgets import QApplication, QMenu, QWidget
 
     cores = _paleta()
     app = QApplication(sys.argv[:1])
+    QIcon.setThemeName(tema_de_icones())
     app.setQuitOnLastWindowClosed(True)
 
     def cor(t):
@@ -93,6 +139,11 @@ def rodar(so_testar=False):
             self.setWindowTitle("so-proprio-dock")
             self.setMouseTracking(True)
             self.apps = []
+            self.escondida = False
+            self.menu_aberto = False
+            self.cronometro_esconde = QTimer(self)
+            self.cronometro_esconde.setSingleShot(True)
+            self.cronometro_esconde.timeout.connect(self.esconder)
             self.ativa = ""
             self.sobre = -1
             self.menu_icone = QPixmap(_caminho_menu())
@@ -106,10 +157,25 @@ def rodar(so_testar=False):
             x = tela.x() + (tela.width() - w) // 2
             y = tela.y() + tela.height() - h - MARGEM
             self.setFixedSize(w, h)
-            self.move(x, y)
+            self.base_y = y
+            self.move(x, y + (h - FAIXA if self.escondida else 0))
             self.update()
             if self.isVisible():
-                self.reservar(x, w, h)
+                self.reservar(x, w, FAIXA if self.escondida else h)
+
+        def esconder(self):
+            if not self.menu_aberto and not self.underMouse():
+                self.escondida = True
+                self.ajustar()
+
+        def mostrar(self):
+            self.cronometro_esconde.stop()
+            if self.escondida:
+                self.escondida = False
+                self.ajustar()
+
+        def enterEvent(self, _e):
+            self.mostrar()
 
         def reservar(self, x, w, h):
             """_NET_WM_STRUT_PARTIAL: janelas maximizadas não ficam por baixo da ilha."""
@@ -121,7 +187,11 @@ def rodar(so_testar=False):
 
         def icone(self, classe):
             if classe not in self.icones:
-                ic = QIcon.fromTheme(nome_icone(classe))
+                ic = QIcon()
+                for nome in (icone_do_desktop(classe), nome_icone(classe), classe.lower()):
+                    if nome and not QIcon.fromTheme(nome).isNull():
+                        ic = QIcon.fromTheme(nome)
+                        break
                 if ic.isNull():
                     ic = QIcon.fromTheme("application-x-executable")
                 self.icones[classe] = ic
@@ -171,6 +241,7 @@ def rodar(so_testar=False):
         def leaveEvent(self, _e):
             self.sobre = -1
             self.update()
+            self.cronometro_esconde.start(ESCONDE_MS)
 
         def mousePressEvent(self, e):
             i = self.indice(e.pos())
@@ -197,7 +268,10 @@ def rodar(so_testar=False):
             m.addAction("Sair", lambda: subprocess.Popen(["openbox", "--exit"]))
             m.addAction("Reiniciar", lambda: subprocess.Popen(["systemctl", "reboot"]))
             m.addAction("Desligar", lambda: subprocess.Popen(["systemctl", "poweroff"]))
+            self.menu_aberto = True
             m.exec_(self.mapToGlobal(QPoint(0, -m.sizeHint().height() - 6)))
+            self.menu_aberto = False
+            self.cronometro_esconde.start(ESCONDE_MS)
 
     dock = Dock()
 
@@ -215,6 +289,17 @@ def rodar(so_testar=False):
 
     dock.show()
     dock.ajustar()
+    dock.cronometro_esconde.start(ESCONDE_MS * 2)
+    if esconder_teste:
+        dock.esconder()
+        app.processEvents()
+        assert dock.escondida and dock.y() == dock.base_y + dock.height() - FAIXA
+        dock.mostrar()
+        app.processEvents()
+        assert not dock.escondida and dock.y() == dock.base_y
+        dock.close()
+        print("esconder ok")
+        return 0
     if so_testar:
         dock.apps = [("0x1", "firefox-esr"), ("0x2", "qterminal")]
         dock.ajustar()
@@ -231,4 +316,4 @@ def rodar(so_testar=False):
 
 
 if __name__ == "__main__":
-    sys.exit(rodar(so_testar="--teste-gui" in sys.argv))
+    sys.exit(rodar(so_testar="--teste-gui" in sys.argv, esconder_teste="--teste-esconder" in sys.argv))
