@@ -306,8 +306,9 @@ def abrir_janela(so_testar=False, fundo=False):
     y = max(0, (raiz.winfo_screenheight() - raiz.winfo_reqheight()) // 3)
     raiz.geometry(f"+{x}+{y}")
     if fundo:
-        # Sem gerenciador de janelas: nada de barra de título, borda ou botões; fica fixo na tela.
-        raiz.overrideredirect(True)
+        # Janela do tipo "desktop": o Openbox a deixa sem moldura, na camada do fundo (abaixo de qualquer app),
+        # fora da lista de janelas e em todas as áreas de trabalho. Precisa ser definido com a janela escondida.
+        raiz.attributes("-type", "desktop")
         y = max(30, (raiz.winfo_screenheight() - raiz.winfo_reqheight()) // 2 - 12)  # abaixo da barra, acima da dock
         raiz.geometry(f"+{x}+{y}")
         raiz.deiconify()

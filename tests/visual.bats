@@ -720,8 +720,8 @@ painel_python() { # um python que tenha tkinter (o do sistema); vazio se nenhum
   grep -q '^librsvg2-bin' "$REPO/grupos/visual.txt"
 }
 
-@test "painel de fundo de verdade: sem moldura (override-redirect), fora da lista de janelas e instância única" {
-  command -v xvfb-run >/dev/null && command -v openbox >/dev/null && command -v xdotool >/dev/null && command -v wmctrl >/dev/null || skip "sem xvfb/openbox/xdotool/wmctrl"
+@test "painel de fundo de verdade: tipo desktop sem moldura, abaixo dos apps (inclusive o navegador), fora da dock e instância única" {
+  command -v xvfb-run >/dev/null && command -v openbox >/dev/null && command -v xdotool >/dev/null && command -v wmctrl >/dev/null && command -v xterm >/dev/null || skip "sem xvfb/openbox/xdotool/wmctrl/xterm"
   py=/usr/bin/python3; for c in /usr/bin/python3.12 /usr/bin/python3 python3; do "$c" -c 'import tkinter' 2>/dev/null && { py="$c"; break; }; done
   export XDG_RUNTIME_DIR="$TMP/xr"; mkdir -p "$XDG_RUNTIME_DIR"; chmod 700 "$XDG_RUNTIME_DIR"
   cat > "$TMP/cena.sh" <<SH
@@ -731,14 +731,20 @@ sleep 1
 sleep 1
 "$py" "$REPO/bin/so-proprio-painel" --fundo >/dev/null 2>&1 &
 sleep 3
+xterm -geometry 100x40+300+80 >/dev/null 2>&1 &
+sleep 2
 echo "janelas=\$(xdotool search --class so-proprio-painel | wc -l)"
-for i in \$(xdotool search --class so-proprio-painel); do xwininfo -id \$i | grep -E 'Override Redirect' ; done
-echo "clientes=\$(wmctrl -l | grep -c 'Painel do PC')"
-kill $(jobs -p) 2>/dev/null || true
+id=\$(xdotool search --class so-proprio-painel | head -1)
+xprop -id \$id _NET_WM_WINDOW_TYPE | sed 's/^/tipo: /'
+xprop -id \$id _NET_FRAME_EXTENTS | sed 's/^/moldura: /'
+echo "fixa=\$(wmctrl -lx | grep -c 'so-proprio-painel.* -1\\|^[^ ]* *-1 so-proprio-painel')"
+topo=\$(xwininfo -root -tree | grep -nE '"xterm"|"Painel do PC"' | sed 's/.*"\\(xterm\\|Painel do PC\\)".*/\\1/' | head -1)
+echo "mais_acima=\$topo"
 SH
   run timeout 60 xvfb-run -a bash "$TMP/cena.sh"
   [ "$status" -eq 0 ]
   echo "$output" | grep -qx 'janelas=1'
-  echo "$output" | grep -q 'Override Redirect State: yes'
-  echo "$output" | grep -qx 'clientes=0'
+  echo "$output" | grep -q '_NET_WM_WINDOW_TYPE_DESKTOP'
+  echo "$output" | grep -qx 'moldura: _NET_FRAME_EXTENTS(CARDINAL) = 0, 0, 0, 0'
+  echo "$output" | grep -qx 'mais_acima=xterm'
 }
