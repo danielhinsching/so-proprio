@@ -450,6 +450,13 @@ S
   grep -q -- '-aG video' "$TMP/usermod.log"
 }
 
+@test "o visual reaplica as regras udev do backlight na hora (sem reiniciar)" {
+  printf '#!/usr/bin/env bash\necho "$@" >> "%s/udevadm.log"\n' "$TMP" > "$TMP/udevadm-stub"
+  chmod +x "$TMP/udevadm-stub"
+  SO_PROPRIO_UDEVADM="$TMP/udevadm-stub" run_visual
+  grep -q -- 'trigger --subsystem-match=backlight --action=add' "$TMP/udevadm.log"
+}
+
 @test "quem já está no grupo video não é alterado" {
   printf '#!/usr/bin/env bash\necho "$@" >> "%s/usermod.log"\n' "$TMP" > "$TMP/usermod-stub"
   chmod +x "$TMP/usermod-stub"
